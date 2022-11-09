@@ -203,10 +203,10 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   
   bmn <- c("GRF", "RF", "JRF", "Nye", "KF")
   if ('all' %in% TreeMethods){
-    bitmask <- rep(T, length(bmn))
+    bitmask <- rep(TRUE, length(bmn))
   } else {
-    bitmask <- rep(F, length(bmn))
-    bitmask <- sapply(bmn, \(x) x %in% TreeMethods)
+    bitmask <- rep(FALSE, length(bmn))
+    bitmask <- vapply(bmn, \(x) x %in% TreeMethods, logical(1))
   }
   
   bmn <- bmn[bitmask]
