@@ -218,7 +218,7 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   for(i in seq_along(bmn))
     pairscoresList[[i]] <- rep(NA_real_, l*(l-1)/2)
   names(pairscoresList) <- bmn
-  
+
   ctr <- 0
   pArray <- vector('list', length=l)
   labelsArray <- vector('list', length=l)
@@ -259,6 +259,7 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
           # GRF
           s <- .Call("GRFInfo", p1, p2, interlabs, FALSE, 0)
           normval <- 0.5*(s[2] + s[3])
+
           if (is.na(normval) || normval == 0){
             pairscoresList$GRF[ctr+1] <- NA
             #pairscoresList$GRF[ctr+1] <- ifelse(s[1] == 0, 0, 1)
@@ -312,6 +313,7 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
           else
             pairscoresList$KF[ctr+1] <- s[1] / normval
         }
+
         # p-value of RF Dist
         if (bitmask[6]){
             s <- .Call("RFDist", p1, p2, interlabs)
