@@ -26,7 +26,6 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
   pl <- length(uvals)
   
   DIM_LENGTH <- min(80L, length(attr(pw, "allOrgs")))
-  DIM_LENGTH <- as.integer(DIM_LENGTH)
   
   MTCorrection <- tolower(MTCorrection)
   useSpecCorr <- FALSE
@@ -42,10 +41,13 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
   if (is.null(precalcProfs)){
     if (Verbose) cat('Pre-processing distance matrices...\n')
     spl <- NULL
-    if (!is.null(MySpeciesTree)) spl <- labels(MySpeciesTree)
+    if (!is.null(MySpeciesTree)){
+      spl <- labels(MySpeciesTree)
+      DIM_LENGTH <- min(80L, length(spl))
+    } 
     #CPs <- CophProfiles(pw, uvals, Verbose=Verbose, speciesList=spl)
     CPs <- RandCophProfiles(pw, uvals, Verbose=Verbose, 
-                              speciesList=spl, outdim=DIM_LENGTH, 
+                              speciesList=spl, outdim=as.integer(DIM_LENGTH), 
                               speciesCorrect=useSpecCorr, 
                               mySpeciesTree=MySpeciesTree, ...)
   } else {
