@@ -1,3 +1,7 @@
+# SynExtend 1.11.4
+* Adds Random Projection for `MirrorTree` predictor to solve memory problems and increase accuracy
+* New internal random number generator using xorshift, significantly faster than `sample()`
+
 # SynExtend 1.11.3
 * Internal bugfixes for JRF Distance--previous commit was incorrectly calculating values
 * Adds new `TreeDistance` predictor for `ProtWeaver`, incorporating all tree distance metrics; these metrics are bundled due to some backend optimizations that improve performance
