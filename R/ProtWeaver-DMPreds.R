@@ -89,7 +89,6 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
     if (Verbose) cat('\n')
   }
   
-  FXN
   pairscores <- rep(NA_real_, pl*(pl-1) / 2)
   ctr <- 0
   endOfRow <- 0

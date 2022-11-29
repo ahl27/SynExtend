@@ -30,7 +30,7 @@ BuildSimMatInternal <- function(vecs, uvals, evalmap, l, n, FXN, ARGS, Verbose,
         } else {
           v2 <- vecs[,j]
         }
-        pairscores[ctr+1] <- FXN(v1, v2, ARGS)
+        pairscores[ctr+1] <- FXN(v1, v2, ARGS, i, j)
       }
       ctr <- ctr + 1
       if (Verbose) setTxtProgressBar(pb, ctr)

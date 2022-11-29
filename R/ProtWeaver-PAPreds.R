@@ -48,7 +48,7 @@ Jaccard.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   nr <- nrow(pap)
   pap[] <- as.integer(pap) 
   ARGS <- list(nr=nr)
-  FXN <- function(v1, v2, ARGS) {
+  FXN <- function(v1, v2, ARGS, ii, jj) {
     return(.Call("calcScoreJaccard", v1, v2, ARGS$nr))
   }
   pairscores <- BuildSimMatInternal(pap, uvals, evalmap, l, n, FXN, ARGS, Verbose)
@@ -82,7 +82,7 @@ Hamming.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   #nc <- ncol(pap)
   pap[] <- as.integer(pap)
   ARGS <- list(nr=nr)
-  FXN <- function(v1, v2, ARGS) {
+  FXN <- function(v1, v2, ARGS, ii, jj) {
     return(.Call("calcScoreHamming", v1, v2, ARGS$nr, 1))
   }
   pairscores <- BuildSimMatInternal(pap, uvals, evalmap, l, n, FXN, ARGS, Verbose)
@@ -141,7 +141,7 @@ CorrGL.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   }
   
   ARGS <- list(numnodes=numnodes)
-  FXN <- function(v1, v2, ARGS) {
+  FXN <- function(v1, v2, ARGS, ii, jj) {
     val <- cor(v1, v2)
     pval <- 1 - pt(val, ARGS$numnodes - 2, lower.tail=FALSE)
     return(pval*val)
@@ -174,7 +174,7 @@ MutualInformation.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
     return(mat)
   }
   
-  FXN <- function(v1, v2, ARGS){
+  FXN <- function(v1, v2, ARGS, ii, jj){
     score <- 0
     v1l <- length(v1)
     tt <- sum(v1 & v2) / v1l
@@ -295,7 +295,7 @@ Behdenna.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   glmat <- abs(glmat)
   
   ARGS <- list(M=M, Cmat=Cmat, bl=bl)
-  FXN <- function(v1, v2, ARGS){
+  FXN <- function(v1, v2, ARGS, ii, jj){
     n1 <- sum(v1)
     n2 <- sum(v2)
     score <- 0
@@ -317,7 +317,7 @@ Behdenna.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
       return(ps)
     }
   }
-  pairscores <- BuildSimMatInternal(glmat, uvals, evalmap, l, n, 
+  pairscores <- BuildSimMatInternal(glmat, uvals, evalmap, l, names(pw), 
                                     FXN, ARGS, Verbose,
                                     CORRECTION=CORRECTION)
   
@@ -375,10 +375,9 @@ GainLoss.ProtWeaver <- function(pw, Subset=NULL,
   }
   
   ARGS <- list(allnonzero=allnonzero, y=y)
-  FXN <- function(v1, v2, ARGS){
+  FXN <- function(v1, v2, ARGS, ii, jj){
     allnonzero <- ARGS$allnonzero
-    # i and j inherit from local scope in call
-    if (allnonzero[i] || allnonzero[j]){
+    if (allnonzero[ii] || allnonzero[jj]){
       return(0)
     } else {
       res <- .Call("calcScoreGL", ARGS$y, v1, v2)
@@ -388,7 +387,7 @@ GainLoss.ProtWeaver <- function(pw, Subset=NULL,
       return(2*res / normer)
     }
   }
-  pairscores <- BuildSimMatInternal(glvs, uvals, evalmap, l, n, 
+  pairscores <- BuildSimMatInternal(glvs, uvals, evalmap, l, names(pw), 
                                     FXN, ARGS, Verbose)
 
   return(pairscores)

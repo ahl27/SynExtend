@@ -30,7 +30,7 @@ Coloc.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   n <- names(pw)[uvals]
   
   ARGS <- list(allsp=allsp)
-  FXN <- function(lab1, lab2, ARGS){
+  FXN <- function(lab1, lab2, ARGS, ii, jj){
     l1sp <- gsub('(.*)_.*$', '\\1', lab1)
     l2sp <- gsub('(.*)_.*$', '\\1', lab2)
     shared <- intersect(l1sp, l2sp)
