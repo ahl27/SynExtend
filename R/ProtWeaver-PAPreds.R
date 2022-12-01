@@ -375,8 +375,8 @@ GainLoss.ProtWeaver <- function(pw, Subset=NULL,
     if (Verbose) setTxtProgressBar(pb, i)
   }
   if(Verbose) cat("\n")
-  
-  ARGS <- list(allnonzero=allnonzero, y=y, bsn=BOOTSTRAP_NUM)
+  lenglv <- nrow(glvs)
+  ARGS <- list(allnonzero=allnonzero, y=y, bsn=BOOTSTRAP_NUM, l=lenglv)
   FXN <- function(v1, v2, ARGS, ii, jj){
     allnonzero <- ARGS$allnonzero
     if (allnonzero[ii] || allnonzero[jj]){
@@ -386,9 +386,14 @@ GainLoss.ProtWeaver <- function(pw, Subset=NULL,
       if (res==0) return(0)
       num_bs <- ARGS$bsn
       if(num_bs > 0){
+        v1 <- as.integer(v1)
+        v2 <- as.integer(v2)
+        l <- as.integer(ARGS$l)
         replicates <- rep(NA_real_, num_bs)
         for(i in seq_len(num_bs)){
-          replicates[i] <- abs(.Call("calcScoreGL", ARGS$y, sample(v1), (v2)))
+          replicates[i] <- abs(.Call("calcScoreGL", ARGS$y, 
+                                     .C("shuffleRInt", v1, l)[[1]],
+                                     .C("shuffleRInt", v2, l)[[1]]))
         }
         pv <- sum(replicates <= abs(res)) / num_bs
         res <- pv*res
