@@ -1,3 +1,6 @@
+# SynExtend 1.11.5.1
+* Adds new function `MoransI` to calculate Moran's *I* for a set of spatially distributed signals
+
 # SynExtend 1.11.4
 * Internal code refactor
 * `ShuffleC` now supports reproducibility using R's `set.seed`
