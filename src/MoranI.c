@@ -53,7 +53,7 @@ double calcMoranVar(double **weights, double weightsum, double *vals, double sam
 
   if(denom == 0){
     return 0;
-  } 
+  }
 
   return(numer/denom - expval*expval);
 }
@@ -65,16 +65,18 @@ SEXP MoransI(SEXP VALS, SEXP DIST, SEXP DIM){
   int dim = INTEGER(DIM)[0];
 
   // Allocate some space, convert Dist object to a matrix
-  double **newdist = calloc(dim, sizeof(double*));
   double *rowsums = calloc(dim, sizeof(double));
+  double **newdist = calloc(dim, sizeof(double*));
+  for(int i=0; i<dim; i++) 
+    newdist[i] = calloc(dim, sizeof(double));
+  
   int ctr=0;
   double cur;
   for (int i=0; i<dim; i++){
-    newdist[i] = calloc(dim, sizeof(double));
     for (int j=i+1; j<dim; j++){
       cur = dist[ctr];
       newdist[i][j] += cur;
-      newdist[i][j] += cur;
+      newdist[j][i] += cur;
       rowsums[i] += cur;
       rowsums[j] += cur;
       ctr++;

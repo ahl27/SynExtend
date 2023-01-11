@@ -35,7 +35,10 @@ MoransI <- function(values, weights, alternative='two.sided'){
   if(length(values) != attr(weights, "Size")){
     stop("'values' and 'weights' do not imply the same number of individuals!")
   }
-  res <- .Call('MoransI', values, weights, length(values))
+  if(!is(vals, 'atomic')){
+    stop("'vals' must be a numeric vector")
+  }
+  res <- .Call('MoransI', as.double(values), as.double(c(weights)), length(values))
   retval <- list(observed=res[1], expected=res[2], sd=sqrt(res[3]))
   
   p <- NULL
