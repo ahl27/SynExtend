@@ -35,19 +35,36 @@ MoransI <- function(values, weights, alternative='two.sided'){
   if(length(values) != attr(weights, "Size")){
     stop("'values' and 'weights' do not imply the same number of individuals!")
   }
-  if(!is(vals, 'atomic')){
+  if(!is(values, 'atomic')){
     stop("'vals' must be a numeric vector")
   }
-  res <- .Call('MoransI', as.double(values), as.double(c(weights)), length(values))
-  retval <- list(observed=res[1], expected=res[2], sd=sqrt(res[3]))
   
+  if (length(values) <= 1){
+    warning("Correlation with a single value is meaningless.")
+    return(list(observed=values[1], expected=NA_real_, sd=Inf, p.value=1))
+  }
+
+  res <- .Call('MoransI', as.double(values), as.double(c(weights)), length(values))
+  if(is.null(res[3])){
+    # This really only happens when all the values are zero,
+    # or like really really close to zero (on the order of <1e-295)
+    return(list(observed=0, expected=-1/(length(values)-1), sd=0, p.value=1))
+  }
+  retval <- list(observed=res[1], expected=res[2], sd=sqrt(res[3]))
+  if (length(values) <= 3){
+    warning('Fewer than 3 values, variance is infinite!')
+    retval$sd <- Inf
+    retval$p.value <- 1 
+    return(retval)
+  }  
+  denom <- ifelse(retval$sd==0, 1, retval$sd)
   p <- NULL
   if (hyptest == 1){
-    p <- 2*pnorm(abs(retval$observed - retval$expected) / retval$sd, lower.tail=FALSE)
+    p <- 2*pnorm(abs(retval$observed - retval$expected) / denom, lower.tail=FALSE)
   } else if (hyptest==2){
-    p <- pnorm((retval$observed - retval$expected) / retval$sd, lower.tail=TRUE)
+    p <- pnorm((retval$observed - retval$expected) / denom, lower.tail=TRUE)
   } else {
-    p <- pnorm((retval$observed - retval$expected) / retval$sd, lower.tail=FALSE)
+    p <- pnorm((retval$observed - retval$expected) / denom, lower.tail=FALSE)
   }
   retval$p.value <- p 
   return(retval)

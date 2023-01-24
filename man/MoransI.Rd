@@ -32,9 +32,9 @@ MoransI(values, weights, alternative='two.sided')
 
 Here, \eqn{N} is the number of points, \eqn{w_{ij}} is the distance between points \eqn{i} and \eqn{j}, \eqn{W = \sum_{i,j} w_{ij}} (the sum of all the weights), \eqn{x_i} is the value of point \eqn{i}, and \eqn{\bar x} is the sample mean of the values.
 
-Moran's \emph{I} has a closed form calculation for variance and expected value, which are calcalated within this function. The full form of the variance is fairly complex, but all the equations are available for reference at \href{https://en.wikipedia.org/wiki/Moran\%27s_I#Expected_value}{here}.
+Moran's \emph{I} has a closed form calculation for variance and expected value, which are calcalated within this function. The full form of the variance is fairly complex, but all the equations are available for reference \href{https://en.wikipedia.org/wiki/Moran\%27s_I#Expected_value}{here}.
 
-A p-value is estimated using the expected value and variance using a null hypothesis of no spatial autocorrelation, and the alternative hypothesis specified in the \code{alternative} argument.
+A p-value is estimated using the expected value and variance using a null hypothesis of no spatial autocorrelation, and the alternative hypothesis specified in the \code{alternative} argument. Note that if fewer than four datapoints are supplied, the variance of Moran's I is infinite. The function will return a standard deviation of \code{Inf} and a p-value of 1 in this case.
 }
 \value{
 A \code{\link{list}} object containing the following named values:
