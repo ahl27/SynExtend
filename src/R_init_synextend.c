@@ -51,6 +51,8 @@ static const R_CallMethodDef callMethods[] = { // method call, pointer, num args
   {"seededPseudoRandomSample", (DL_FUNC) &seededPseudoRandomSample, 2},
   {"MoransI", (DL_FUNC) &MoransI, 3},
   {"StringToNVDT", (DL_FUNC) &StringToNVDT, 4},
+  {"rpdendrapply", (DL_FUNC) &rpdendrapply, 3},
+  {"HungarianAssignment", (DL_FUNC) &HungarianAssignment, 2},
   {NULL, NULL, 0}
 };
 
@@ -61,6 +63,7 @@ static const R_CMethodDef cMethods[] = {
   {"cleanupFxn", (DL_FUNC) &cleanupFxn, 0},
   {"shuffleRInt", (DL_FUNC) &shuffleRInt, 2},
   {"shuffleRRepl", (DL_FUNC) &shuffleRRepl, 2},
+  {"hungarianCleanup", (DL_FUNC) &hungarianCleanup, 0},
   {NULL, NULL, 0}
 };
 

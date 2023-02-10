@@ -310,6 +310,41 @@ flatdendrapply <- function(dend, NODEFUN=NULL, LEAFFUN=NODEFUN,
   return(retval)
 }
 
+recursive_parentdendrapply <- function(dend, f){
+  # f must have two arguments
+  stopifnot("function must have two arguments"=length(formals(f)) == 2)
+  return(.Call("rpdendrapply", dend, f, new.env(), PACKAGE="SynExtend"))
+}
+
+find_dend_distances <- function(dend){
+  leafh <- rapply(dend, \(x) c(attr(x, 'label'), attr(x, 'height')))
+  leafheights <- as.numeric(leafh[seq(2, length(leafh)+1, 2)])
+  names(leafheights) <- leafh[seq(1, length(leafh), 2)]
+  
+  roothvec <- rep(attr(dend, 'height'), length(leafheights))
+  roothvec <- roothvec - leafheights
+  names(roothvec) <- names(leafheights)
+  roothvec <- roothvec[order(unlist(dend))]
+  attr(dend, 'distances') <- roothvec
+  
+  finddistvec <- function(node, parent){
+    curv <- attr(parent, 'distances')
+    branchlen <- attr(parent, 'height') - attr(node, 'height')
+    curv <- curv + branchlen
+    if (is.null(attr(node, 'leaf'))){
+      children <- unlist(node)
+    } else {
+      children <- attr(node, 'label')
+    }
+    curv[children] <- curv[children] - 2*branchlen
+    attr(node, 'distances') <- curv
+    return(node)
+  }
+  
+  dend <- recursive_parentdendrapply(dend, finddistvec)
+  return(dend)
+}
+
 AdjMatToDf <- function(preds, Verbose=TRUE){
   stopifnot(length(preds) > 0)
   n <- names(preds)

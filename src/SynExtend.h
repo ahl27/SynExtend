@@ -38,9 +38,12 @@ SEXP MoransI(SEXP VALS, SEXP DIST, SEXP DIM);
 
 /**** CShuffle.c ****/
 void shuffleRInt(int *v, int *l);
-
 void shuffleRRepl(int *v, int *l);
 
 
 /**** NucleotideCounts.c ****/
 SEXP StringToNVDT(SEXP DNASTRING, SEXP REMOVEGAPS, SEXP EXTENDED, SEXP USEDNA);
+
+/**** HungarianAlgo.c ****/
+SEXP HungarianAssignment(SEXP MATVEC, SEXP DIM);
+void hungarianCleanup();

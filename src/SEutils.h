@@ -7,6 +7,8 @@
 #include <limits.h>
 #include <stdint.h>
 #include <R_ext/Random.h>
+#include <R.h>
+#include <Rdefines.h>
 
 typedef unsigned int uint;
 
@@ -74,5 +76,11 @@ long inline doubleFactorial(int n){
   while (n > 0) retval *= n--;
   return retval;
 }
+
+/*** Dendrapply substitutes ***/
+void rdendrapplyhelper(SEXP node, SEXP f, SEXP env);
+SEXP rdendrapply(SEXP tree, SEXP fn, SEXP env);
+void rpdendrapplyhelper(SEXP node, SEXP f, SEXP env);
+SEXP rpdendrapply(SEXP tree, SEXP fn, SEXP env);
 
 #endif

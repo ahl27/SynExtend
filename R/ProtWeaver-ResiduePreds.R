@@ -65,7 +65,7 @@ ResidueMI.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
 }
 
 NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE, 
-                                 precalcSubset=NULL, extended=TRUE, ...){
+                            precalcSubset=NULL, extended=TRUE, ...){
   #source('/Users/aidan/Nextcloud/RStudioSync/comps/NVDT/calcNVDT.R')
   useResidue <- attr(pw, 'useResidue')
   useMT <- attr(pw, 'useMT')
@@ -148,4 +148,9 @@ NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   
   return(pairscores)
   
+}
+
+ProtWeaver.Ancestral <- function(pw, Subset=NULL, Verbose=TRUE, 
+                                 precalcSubset=NULL, extended=TRUE, ...){
+  return(NULL)  
 }

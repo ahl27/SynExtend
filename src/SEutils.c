@@ -124,3 +124,51 @@ uint32_t xorshift32b(struct RNGstate32 *rngstate) {
   double *: shuffle_d(x, n),
   char *: shuffle_c(x, n))
 */
+
+/* Dendrapply Methods */
+
+// rdendrapply, should work the same as base dendrapply but faster
+// possibly a deeper recursion stack as well
+void rdendrapplyhelper(SEXP node, SEXP f, SEXP env){
+  if (isNull(getAttrib(node, install("leaf")))){
+    int n = length(node);
+    for(int i=0; i<n; i++){
+      SEXP call = PROTECT(LCONS(f, LCONS(VECTOR_ELT(node, i), R_NilValue)));
+      SET_VECTOR_ELT(node, i, R_forceAndCall(call, 1, env));
+      UNPROTECT(1);
+      rdendrapplyhelper(VECTOR_ELT(node, i), f, env);
+    }
+  }
+  return;
+}
+
+SEXP rdendrapply(SEXP tree, SEXP fn, SEXP env){
+  SEXP treecopy = PROTECT(duplicate(tree));
+  SEXP call = PROTECT(LCONS(fn, LCONS(treecopy, R_NilValue)));
+  treecopy = PROTECT(R_forceAndCall(call, 1, env));
+  rdendrapplyhelper(treecopy, fn, env);
+  UNPROTECT(3);
+  return treecopy;
+}
+
+// rpdendrapply, recursively appiles a function passing the parent node as an arg
+void rpdendrapplyhelper(SEXP node, SEXP f, SEXP env){
+  if (isNull(getAttrib(node, install("leaf")))){
+    int n = length(node);
+    for(int i=0; i<n; i++){
+      SEXP call = PROTECT(LCONS(f, LCONS(VECTOR_ELT(node, i), LCONS(node, R_NilValue))));
+      SET_VECTOR_ELT(node, i, R_forceAndCall(call, 2, env));
+      UNPROTECT(1);
+      rpdendrapplyhelper(VECTOR_ELT(node, i), f, env);
+    }
+  }
+  return;
+}
+
+SEXP rpdendrapply(SEXP tree, SEXP fn, SEXP env){
+  SEXP treecopy = PROTECT(duplicate(tree));
+  rpdendrapplyhelper(treecopy, fn, env);
+  UNPROTECT(1);
+  return treecopy;
+}
+
