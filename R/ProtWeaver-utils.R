@@ -888,4 +888,107 @@ findSpeciesTree <- function(pw, Verbose=TRUE, NameFun=NULL){
   
   return(SpecTree)
 }
+
+## Residue stuff
+find_dists_pos <- function(dend){
+  cutoff <- 100L
+  dend <- MapCharacters(dend)
+  dend <- SynExtend:::find_dend_distances(dend)
+  allPos <- names(sort(table(rapply(dend, \(x){
+    as.integer(gsub("[^0-9]([0-9]*)[^0-9]", "\\1", attr(x, 'change')))
+  }, how='unlist')), decreasing = TRUE))
+  
+  if(length(allPos) > cutoff){
+    allPos <- allPos[seq_len(cutoff)]
+  }
+  
+  # ensure they're always characters
+  labs <- as.character(names(attr(dend, 'distances')))
+  num_labels <- length(labs)
+  posVecs <- lapply(allPos, \(x) {
+    y <- rep(Inf, num_labels)
+    names(y) <- labs
+    return(y)
+  })
+  names(posVecs) <- allPos
+  
+  #names(pm) <- as.character(allPos)
+  rapply(dend, \(x) {
+    pos <- gsub("[^0-9]([0-9]*)[^0-9]", "\\1", attr(x, 'change'))
+    d <- attr(x,'distances')
+    n <- names(d)
+    for (pv in pos){
+      if(!(pv %in% allPos)) next
+      curv <- posVecs[[pv]]
+      locs <- curv > d
+      curv[locs] <- d[locs]
+      posVecs[[pv]] <<- curv
+    }
+    return(NULL)
+  }, how='unlist')
+  
+  for(i in seq_along(posVecs)){
+    p <- posVecs[[i]]
+    p[is.infinite(p)] <- NA_real_
+    posVecs[[i]] <- p
+  }
+  
+  return(posVecs)
+}
+
+pair_residues <- function(pm1, pm2){
+  l1 <- length(pm1)
+  l2 <- length(pm2)
+  if(l1 >= l2){
+    pmL <- pm1
+    pmS <- pm2
+  } else {
+    pmL <- pm2
+    pmS <- pm1
+    l1 <- l2
+    l2 <- length(pm1)
+  }
+  if(l2 <= 3) return(list(R=0,P=0))
+  nameoverlap <- intersect(names(pmL[[1]]), names(pmS[[2]]))
+  if(length(nameoverlap) <= 2) return(list(R=0,P=0))
+  for(i in seq_len(l1)){
+    pmL[[i]] <- pmL[[i]][nameoverlap]
+    if(i <= l2)
+      pmS[[i]] <- pmS[[i]][nameoverlap]
+  }
+  ## Greater value should always be columns
+  
+  # Max pair because residues can have one to many contacts
+  CorrVal <- PVal <- rep(-Inf, l1)
+  ns <- names(pmS)
+  for(i in seq_len(l1)){
+    vCol <- pmL[[i]]
+    minCorr <- c(Inf, -1)
+    for(j in seq_len(l2)){
+      vRow <- pmS[[j]]
+      curcorr <- .Call("fastPearsonC", vRow, vCol)
+      
+      if (curcorr[1] > CorrVal[i]){
+        CorrVal[i] <- curcorr[1]
+        # Alternative = 'greater'
+        # if it was 'either' it would be
+        # p = p < 0.5 ? 2*p : (1-p)*2
+        # I don't think 'either' makes sense
+        PVal[i] <- 1-pt(curcorr[2], curcorr[3]-2)
+      }
+      # Negative correlation is meaningless
+      # but it shouldn't count against scoring
+      if (CorrVal[i] < 0) CorrVal[i] <- 0
+    }
+  }
+  subs <- !is.na(PVal)
+  if(!sum(subs)) return(list(R=0,P=0))
+  PVal <- PVal[subs]
+  CorrVal <- CorrVal[subs]
+  # correction for zeros
+  PVal[PVal==0] <- 1e-16
+  meanP <- 1/sum(1/PVal)
+  meanR <- mean(CorrVal)
+  return(list(R=meanR, P=meanP))
+}
 ########

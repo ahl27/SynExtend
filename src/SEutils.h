@@ -83,4 +83,9 @@ SEXP rdendrapply(SEXP tree, SEXP fn, SEXP env);
 void rpdendrapplyhelper(SEXP node, SEXP f, SEXP env);
 SEXP rpdendrapply(SEXP tree, SEXP fn, SEXP env);
 
+
+/*** Other Functions ***/
+void genCostMatrix(double *m1, double *m2, int *nc1p, int *nc2p, int *nrp, double *costMat, int *idxLookup);
+
+
 #endif

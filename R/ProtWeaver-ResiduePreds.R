@@ -10,6 +10,7 @@
 #### S3 Generic Definitions ####
 ResidueMI <- function(pw, ...) UseMethod('ResidueMI')
 NVDT <- function(pw, ...) UseMethod('NVDT')
+Ancestral <- function(pw, ...) UseMethod('Ancestral')
 ################################
 
 ResidueMI.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE, 
@@ -150,7 +151,64 @@ NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   
 }
 
-ProtWeaver.Ancestral <- function(pw, Subset=NULL, Verbose=TRUE, 
-                                 precalcSubset=NULL, extended=TRUE, ...){
-  return(NULL)  
+Ancestral.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE, 
+                                 precalcSubset=NULL, ...){
+  # TODO: checks for residue presence in trees
+  if (!is.null(precalcSubset))
+    subs <- precalcSubset
+  else
+    subs <- ProcessSubset(pw, Subset)
+  
+  uvals <- subs$uvals
+  evalmap <- subs$evalmap
+  l <- length(uvals)
+  n <- names(pw)
+  
+  if ( l == 1 ){
+    mat <- matrix(1, nrow=1, ncol=1)
+    rownames(mat) <- colnames(mat) <- n
+    return(mat)
+  }
+  
+  pmlst <- vector('list', length=l)
+  if (Verbose){
+    cat("Pre-processing dendrograms...\n")
+    pb <- txtProgressBar(max=l, style=3)
+  }
+  for (i in seq_len(l)){
+    uv <- uvals[i]
+    pmlst[[i]] <- find_dists_pos(pw[[uv]])
+    if(Verbose) setTxtProgressBar(pb, i)
+  }
+  
+  if(Verbose) cat('\nDone.\n')
+  pairscores <- rep(NA_real_, l*(l-1)/2)
+  if (Verbose) pb <- txtProgressBar(max=(l*(l-1) / 2), style=3)
+  ctr <- 0
+  for ( i in seq_len(l-1) ){
+    uval1 <- uvals[i]
+    v1 <- pmlst[[i]]
+    for ( j in (i+1):l ){
+      uval2 <- uvals[j]
+      accessor <- as.character(min(uval1, uval2))
+      entry <- max(uval1, uval2)
+      if (i!=j && (is.null(evalmap) || entry %in% evalmap[[accessor]])){
+        v2 <- pmlst[[j]]
+        res <- pair_residues(v1,v2)
+        if(is.na(res[1]) || is.nan(res$R)) 
+          pairscores[ctr+1] <- NA
+        else
+          pairscores[ctr+1] <- abs(res$R) * (1-res$P)
+      }
+      ctr <- ctr + 1
+      if (Verbose) setTxtProgressBar(pb, ctr)
+      #if (Verbose) cat("\r", ctr, " / ", 2963, sep='')
+    }
+  }
+  n <- n[uvals]
+  pairscores <- as.simMat(pairscores, NAMES=n, DIAG=FALSE)
+  Diag(pairscores) <- 1
+  if (Verbose) cat('\n')
+  
+  return(pairscores)
 }

@@ -1,3 +1,11 @@
+
+# SynExtend 1.11.7.2
+* Adds`HungarianAlgorithm` for optimal solving of the linear assignment problem (O(n^3) complexity)
+* Adds new C code for fast computation of Pearson's R and p-value
+* Adds new `Ancestral.ProtWeaver` algorithm for calculating coevolution from correlated residue changes
+* Supporting code and documentation for `Ancestral.ProtWeaver`
+* Other new internal methods 
+
 # SynExtend 1.11.7.1
 * Updates `GRF` method to be called `CI` (for **C**lustering **I**nformation Distance)
 

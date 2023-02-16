@@ -172,3 +172,31 @@ SEXP rpdendrapply(SEXP tree, SEXP fn, SEXP env){
   return treecopy;
 }
 
+/* Other Random Stuff */
+void genCostMatrix(double *m1, double *m2, int *nc1p, int *nc2p, int *nrp, double *costMat, int *idxLookup){
+  const int nc1 = *nc1p;
+  const int nc2 = *nc2p;
+  const int nr = *nrp;
+
+  double minv, tmp;
+  int col1, col2, row;
+  // remember that R matrices are column-major
+  for(int i=0; i<nc1; i++){
+    col1 = i*nr;
+    for(int j=0; j<nc2; j++){
+      col2 = j*nr;
+      minv = -1;
+      for (int k=0; k<nr; k++){
+        tmp = m1[col1+k] + m2[col2+k];
+        if(tmp < minv || minv < 0){
+          minv = tmp;
+          row = k+1;
+        }
+      }
+      costMat[j*nc1+i] = minv;
+      idxLookup[j*nc1+i] = row;
+    }
+  }
+
+  return;
+}
