@@ -316,7 +316,13 @@ recursive_parentdendrapply <- function(dend, f){
   return(.Call("rpdendrapply", dend, f, new.env(), PACKAGE="SynExtend"))
 }
 
-find_dend_distances <- function(dend){
+find_dend_distances <- function(dend, useColoc=FALSE){
+  if(useColoc){
+    dend <- rapply(dend, \(x){
+      attr(x, 'label') <- gsub("([^_]*)_.*", '\\1',attr(x, 'label'))
+      return(x)
+    }, how='replace')
+  }
   leafh <- rapply(dend, \(x) c(attr(x, 'label'), attr(x, 'height')))
   leafheights <- as.numeric(leafh[seq(2, length(leafh)+1, 2)])
   names(leafheights) <- leafh[seq(1, length(leafh), 2)]
@@ -326,18 +332,21 @@ find_dend_distances <- function(dend){
   names(roothvec) <- names(leafheights)
   roothvec <- roothvec[order(unlist(dend))]
   attr(dend, 'distances') <- roothvec
+  attr(dend, 'branchlen') <- 0
   
   finddistvec <- function(node, parent){
     curv <- attr(parent, 'distances')
     branchlen <- attr(parent, 'height') - attr(node, 'height')
-    curv <- curv + branchlen
+    pbranchlen <- attr(parent, 'branchlen')
+    curv <- curv + 0.5*(branchlen+pbranchlen)
     if (is.null(attr(node, 'leaf'))){
       children <- unlist(node)
     } else {
       children <- attr(node, 'label')
     }
-    curv[children] <- curv[children] - 2*branchlen
+    curv[children] <- curv[children] - branchlen - pbranchlen
     attr(node, 'distances') <- curv
+    attr(node, 'branchlen') <- branchlen
     return(node)
   }
   
@@ -890,10 +899,10 @@ findSpeciesTree <- function(pw, Verbose=TRUE, NameFun=NULL){
 }
 
 ## Residue stuff
-find_dists_pos <- function(dend){
+find_dists_pos <- function(dend, useColoc=FALSE){
   cutoff <- 100L
   dend <- MapCharacters(dend)
-  dend <- SynExtend:::find_dend_distances(dend)
+  dend <- find_dend_distances(dend, useColoc)
   allPos <- names(sort(table(rapply(dend, \(x){
     as.integer(gsub("[^0-9]([0-9]*)[^0-9]", "\\1", attr(x, 'change')))
   }, how='unlist')), decreasing = TRUE))

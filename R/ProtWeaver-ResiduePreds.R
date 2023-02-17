@@ -153,7 +153,15 @@ NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
 
 Ancestral.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE, 
                                  precalcSubset=NULL, ...){
-  # TODO: checks for residue presence in trees
+  useResidue <- attr(pw, 'useResidue')
+  useMT <- attr(pw, 'useMT')
+  useColoc <- attr(pw, 'useColoc')
+  
+  stopifnot('ProtWeaver object must be initialized with dendrograms to run Residue methods'=
+              useMT)
+  stopifnot('ProtWeaver dendrograms must have ancestral states to run Residue methods'=
+              useResidue)
+  
   if (!is.null(precalcSubset))
     subs <- precalcSubset
   else
@@ -177,7 +185,7 @@ Ancestral.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   }
   for (i in seq_len(l)){
     uv <- uvals[i]
-    pmlst[[i]] <- find_dists_pos(pw[[uv]])
+    pmlst[[i]] <- find_dists_pos(pw[[uv]], useColoc)
     if(Verbose) setTxtProgressBar(pb, i)
   }
   
