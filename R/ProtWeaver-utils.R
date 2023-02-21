@@ -141,8 +141,8 @@ CophProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE,
 }
 
 RandCophProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE, 
-                                      speciesList=NULL, outdim=-1, 
-                                      speciesCorrect=FALSE, mySpeciesTree=NULL, ...){
+                                        speciesList=NULL, outdim=-1, 
+                                        speciesCorrect=FALSE, mySpeciesTree=NULL, ...){
   ## TODO: Some way to handle paralogs
   cols <- names(pw)
   ao <- attr(pw, 'allOrgs')
@@ -189,7 +189,7 @@ RandCophProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE,
       cop <- as.matrix(Cophenetic(pw[[i]]))
       copOrgNames <- rownames(cop)
       if (useColoc){
-        copOrgNames <- vapply(copOrgNames, gsub, pattern='(.+)_.+_[0-9]+', 
+        copOrgNames <- vapply(copOrgNames, gsub, pattern='([^_]*)_.*', 
                               replacement='\\1', FUN.VALUE=character(1))
         rownames(cop) <- colnames(cop) <- copOrgNames
       }
@@ -197,7 +197,7 @@ RandCophProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE,
       copvec <- dummycoph[ut]
       pos <- which(copvec != 0)
       if (speciesCorrect){
-       copvec[pos] <- (copvec[pos] - specvec[pos]) / spv2[pos]
+        copvec[pos] <- (copvec[pos] - specvec[pos]) / spv2[pos]
       }
       copvec <- .Call("randomProjection", copvec, 
                       pos, length(pos), outdim, PACKAGE="SynExtend")  
@@ -235,7 +235,7 @@ ProcessSubset <- function(pw, Subset=NULL){
         Subset <- matrix(vapply(c(Subset), function(x) {
           val <- which(x==n)
           val <- ifelse(length(val) == 0, -1, val[1])
-          }, 0), ncol=2)
+        }, 0), ncol=2)
         excise <- (Subset[,1] < 0) | (Subset[,2] < 0)
         if (sum(excise) > 0) 
           Subset <- Subset[!excise,]

@@ -30,7 +30,7 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
   pl <- length(uvals)
   
   DIM_LENGTH <- min(80L, length(attr(pw, "allOrgs")))
-  
+  alllabs <- lapply(uvals, \(x) labels(pw[[x]]))
   MTCorrection <- tolower(MTCorrection)
   useSpecCorr <- FALSE
   if ('speciestree' %in% MTCorrection){
@@ -98,6 +98,7 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
     endOfRow <- endOfRow + (pl-i)
     uval1 <- uvals[i]
     v1 <- CPs[,i]
+    l1 <- alllabs[[i]]
     sd1 <- sd(v1, na.rm=TRUE)
     # Should only be NA if there's only one entry
     if (is.na(sd1) || sd1 == 0){
@@ -111,6 +112,7 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
         entry <- max(uval1, uval2)
         if (is.null(evalmap) || entry %in% evalmap[[accessor]]){
           v2 <- CPs[,j]
+          l2 <- alllabs[[j]]
           sd2 <- sd(v2, na.rm=TRUE)
           if (is.na(sd2) || sd2 == 0)
             val <- NA
@@ -120,7 +122,8 @@ MirrorTree.ProtWeaver <- function(pw, MTCorrection=c(),
                                         method='spearman'))
             num_branch <- length(v1)
             pval <- 1 - exp(pt(val, num_branch-2, lower.tail=FALSE, log.p=TRUE))
-            val <- val*pval
+            overlap <- length(intersect(l1,l2)) / length(unique(c(l1,l2)))
+            val <- val*pval*overlap
           }
           pairscores[ctr+1] <- ifelse(is.na(val), 0, val)
         }
