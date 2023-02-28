@@ -84,6 +84,7 @@ NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   uvals <- subs$uvals
   evalmap <- subs$evalmap
   l <- length(uvals)
+  alllabs <- lapply(uvals, \(x) labels(pw[[x]]))
   n <- names(pw)
   if ( l == 1 ){
     mat <- matrix(1, nrow=1, ncol=1)
@@ -129,14 +130,20 @@ NVDT.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
   if (Verbose) pb <- txtProgressBar(max=(l*(l-1) / 2), style=3)
   for ( i in seq_len(l-1) ){
     uval1 <- uvals[i]
+    l1 <- alllabs[[i]]
     v1 <- vecs[i,]
     for ( j in (i+1):l ){
       uval2 <- uvals[j]
+      l2 <- alllabs[[j]]
       accessor <- as.character(min(uval1, uval2))
       entry <- max(uval1, uval2)
       if (i!=j && (is.null(evalmap) || entry %in% evalmap[[accessor]])){
         v2 <- vecs[j,]
-        pairscores[ctr+1] <- cor(v1,v2)
+        if(length(intersect(l1,l2))==0){
+          pairscores[ctr+1] <- 0
+        } else {
+          pairscores[ctr+1] <- cor(v1,v2)
+        }
       }
       ctr <- ctr + 1
       if (Verbose) setTxtProgressBar(pb, ctr)

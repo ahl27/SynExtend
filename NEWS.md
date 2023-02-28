@@ -1,3 +1,8 @@
+# SynExtend 1.11.7.3
+* `Method="CI"` in `PhyloDistance` now calculates an approximate p-value using simulated data from Smith (2020)
+* Various updates and optimizations to internal `ProtWeaver` methods
+* Updates some documentation
+* Some functions have been updated to use `match.arg`
 
 # SynExtend 1.11.7.2
 * Adds`HungarianAlgorithm` for optimal solving of the linear assignment problem (O(n^3) complexity)

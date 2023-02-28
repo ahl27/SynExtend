@@ -61,7 +61,7 @@ PAProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE,
   if (useMT)
     pw <- lapply(pw, labels)
   if (useColoc)
-    pw <- lapply(pw, gsub, pattern='(.+)_.+_[0-9]+', replacement='\\1')
+    pw <- lapply(pw, gsub, pattern='([^_]*)_.*', replacement='\\1')
   
   skip <- FALSE
   if ( !is.null(toEval) ){
@@ -959,7 +959,7 @@ pair_residues <- function(pm1, pm2){
   }
   if(l2 <= 3) return(list(R=0,P=0))
   nameoverlap <- intersect(names(pmL[[1]]), names(pmS[[2]]))
-  if(length(nameoverlap) <= 2) return(list(R=0,P=0))
+  if(length(nameoverlap) <= 2) return(list(R=0,P=1))
   for(i in seq_len(l1)){
     pmL[[i]] <- pmL[[i]][nameoverlap]
     if(i <= l2)
@@ -991,7 +991,7 @@ pair_residues <- function(pm1, pm2){
     }
   }
   subs <- !is.na(PVal)
-  if(!sum(subs)) return(list(R=0,P=0))
+  if(!sum(subs)) return(list(R=0,P=1))
   PVal <- PVal[subs]
   CorrVal <- CorrVal[subs]
   # correction for zeros

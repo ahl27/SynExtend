@@ -183,6 +183,11 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
     bitmask <- vapply(bmn, \(x) x %in% TreeMethods, logical(1))
   }
   
+  if(bitmask[1]){
+    CI_DISTANCE_INTERNAL <- NULL
+    data('CIDist_NullDist', package="SynExtend", envir=environment())
+  }
+  
   bmn <- bmn[bitmask]
   pairscoresList <- vector('list', length=length(bmn))
   for(i in seq_along(bmn))
@@ -197,7 +202,7 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
     if (useColoc){
       tree <- rapply(tree, \(x){
         if (!is.null(attr(x, 'leaf'))){
-          attr(x, 'label') <- gsub("(.*)_.*_.*", '\\1', attr(x, 'label'))
+          attr(x, 'label') <- gsub("([^_]*)_.*", '\\1', attr(x, 'label'))
         }
         return(x)
       }, how='replace')
@@ -233,9 +238,29 @@ TreeDistance.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
           if (is.na(normval) || normval == 0){
             pairscoresList$CI[ctr+1] <- NA
             #pairscoresList$GRF[ctr+1] <- ifelse(s[1] == 0, 0, 1)
+          } else {
+            s <- (normval - s[1]) / normval
+            s <- max(s, 0)
+            pv <- 0
+            if(!is.null(CI_DISTANCE_INTERNAL)){
+              # p-value correction using random trees
+              leninter <- length(interlabs) - 3
+              leninter <- min(leninter,197)
+              rowtocheck <- c(0, CI_DISTANCE_INTERNAL[2:10,leninter], 1)
+              pvals <- c(0,1,5,10,25,50,25,10,5,1,0)/100
+              # move score to right side
+              pvalind <- ifelse(s > 0.5, 1-s, s)
+              ploc <- which(pvalind < rowtocheck)[1]
+              if(ploc == 1){
+                pv <- 0
+              } else {
+                pv <- (s - rowtocheck[ploc-1]) / (rowtocheck[ploc] - rowtocheck[ploc-1])
+                pv <- pv * abs(pvals[ploc] - pvals[ploc-1]) + min(pvals[ploc-1], pvals[ploc])
+                pv <- pv * 2
+              }
+            }
+            pairscoresList$CI[ctr+1] <- (1-s)*(1-pv)
           }
-          else
-            pairscoresList$CI[ctr+1] <- 1 - (normval - s[1]) / normval
         }
         # RF
         if (bitmask[2]){
