@@ -57,4 +57,12 @@ void hungarianCleanup(void);
 void free_dendrapply_list(void);
 SEXP do_dendrapply(SEXP tree, SEXP fn, SEXP env, SEXP order);
 
+
+/**** NeuralNetwork ****/
+/*
+SEXP R_initNNptr(SEXP NLAYERS, SEXP LAYERSIZES, SEXP ACTIVFUNCS, SEXP INPUT_SIZE, SEXP LR, SEXP LFXN);
+SEXP R_PredictForInput(SEXP INPUTVECTOR, SEXP nnPtr);
+SEXP R_UpdateWeights(SEXP LOSSVEC, SEXP nnPtr);
+*/
+
 #endif

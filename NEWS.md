@@ -1,3 +1,6 @@
+# SynExtend 1.13.1.1
+* `SuperTree` now works directly with `dist` objects, providing better performance and scaling
+
 # SynExtend 1.11.8
 * Fixes various small bugs in `MoransI`
 * Adds some multiprocessing support (more will be added in the future)
