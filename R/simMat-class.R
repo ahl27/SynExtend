@@ -149,11 +149,11 @@ as.matrix.simMat <- function(x, ...){
 }
 
 `[.simMat` <- function(x, i, j){
+  hasi <- !missing(i)
+  hasj <- !missing(j)
   nr <- attr(x, 'nrow')
   ns <- attr(x, 'NAMES')
   svals <- c(0, cumsum(nr:1)) + 1
-  hasi <- !missing(i)
-  hasj <- !missing(j)
   COLOUT <- FALSE
   if (!hasi && !hasj)
     return(x)

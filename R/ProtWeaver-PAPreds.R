@@ -139,6 +139,7 @@ CorrGL.ProtWeaver <- function(pw, Subset=NULL, Verbose=TRUE,
     glvs[,i] <- glv
     if (Verbose) setTxtProgressBar(pb, i)
   }
+  if(Verbose) cat("\n")
   
   ARGS <- list(numnodes=numnodes)
   FXN <- function(v1, v2, ARGS, ii, jj) {

@@ -201,7 +201,7 @@ void genCostMatrix(double *m1, double *m2, int *nc1p, int *nc2p, int *nrp, doubl
   return;
 }
 
-void R_combineDistObj(double *d1, double *d2, int *pos1, int *pos2, int *n1, int *n2){
+void R_combineDistObj(double *d1, double *d2, int *pos2, int *n1, int *n2, double *mult){
   // d2 is the shorter distance matrix that will be added into d1
   const int len1 = n1[0];
   const int len2 = n2[0];
@@ -214,7 +214,7 @@ void R_combineDistObj(double *d1, double *d2, int *pos1, int *pos2, int *n1, int
   // current row/col INDEX in second dist
   int col2 = 0;
   int row2 = 1;
-  double v;
+  double v, w;
   int m,M;
   for(int i=0; i<iterlen; i++){
     v = d2[i];
@@ -225,6 +225,8 @@ void R_combineDistObj(double *d1, double *d2, int *pos1, int *pos2, int *n1, int
       m = pos2[col2];
       M = pos2[row2];
     }
+    w = mult[row2] * mult[col2];
+    v *= w;
 
     // If the values are the same, just skip
     if(m!=M)

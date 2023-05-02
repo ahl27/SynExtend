@@ -125,15 +125,3 @@ SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1){
   }
   return(newTree)
 }
-
-
-combineDist <- function(dist1, dist2){
-    l1 <- attr(dist1, 'Labels')
-    l2 <- attr(dist2, 'Labels')
-    stopifnot('dist1 must be a superset of dist2'=all(l2 %in% l1))
-    pos1 <- seq_along(l1)
-    pos2 <- vapply(l2, \(x) which(x==l1)[1], integer(1L))
-    n1 <- attr(dist1, 'Size')
-    n2 <- attr(dist2, 'Size')
-    .C('R_combineDistObj', dist1, dist2, pos1, pos2, n1, n2)[[1]]
-}

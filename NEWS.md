@@ -1,6 +1,11 @@
 # SynExtend 1.13.1.1
 * `SuperTree` now works directly with `dist` objects, providing better performance and scaling
 
+# SynExtend 1.13.1.2
+* Method `NVDC` now supports amino acid sequences using the `DNAseqs=FALSE` argument
+* Method `NVDC` now calculates a p-value-weighted score
+* Many internal performance improvements
+
 # SynExtend 1.11.8
 * Fixes various small bugs in `MoransI`
 * Adds some multiprocessing support (more will be added in the future)
