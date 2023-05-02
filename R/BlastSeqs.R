@@ -63,7 +63,8 @@ BlastSeqs <- function(seqs, BlastDB,
 
 MakeBlastDb <- function(seqs, dbtype=c('prot', 'nucl'), 
                         dbname=NULL, dbpath=NULL,
-                        extraArgs='', verbose=TRUE){
+                        extraArgs='', createDirectory=FALSE, 
+                        verbose=TRUE){
   dbtype <- match.arg(dbtype)
   stopifnot("'seqs' must be XStringSet or path to a .fasta file"=
               any(is(seqs, 'DNAStringSet'),  
@@ -84,6 +85,7 @@ MakeBlastDb <- function(seqs, dbtype=c('prot', 'nucl'),
     f <- tempfile()
     writeXStringSet(seqs, filepath=f, format='FASTA')
   } else {
+    seqs <- normalizePath(seqs, mustWork=TRUE)
     stopifnot('File does not exist'=file.exists(seqs))
     stopifnot(length(readBStringSet(seqs, format='fasta', nrec=1))==1) #error message never shows but works correctly
     if (verbose) cat('Input file located...\n\n')
@@ -95,13 +97,18 @@ MakeBlastDb <- function(seqs, dbtype=c('prot', 'nucl'),
   else 
     blastdbdir <- dbpath
   
-  stopifnot(dir.exists(blastdbdir))
+  direxists <- dir.exists(blastdbdir)
+  if(createDirectory & !direxists){
+    dir.create(blastdbdir)
+  } else if(!direxists){
+    stop("Directory dbpath does not exist.", 
+    " Did you mean to set createDirectory=TRUE?")
+  }
   
   cmdlineArgs <- paste('-in', f,
                        '-input_type fasta',
                        '-dbtype', dbtype, 
-                       '-title', dbname,
-                       '-out', blastdbdir, 
+                       '-out', file.path(blastdbdir, dbname),
                        extraArgs)
   
   if (verbose) {
@@ -114,6 +121,7 @@ MakeBlastDb <- function(seqs, dbtype=c('prot', 'nucl'),
   if(length(errs) > 0 && any(grepl("ERROR", errs))){
     stop(errs)
   }
+  
   retVal <- c(blastdbdir, dbname)
   names(retVal) <- c("Path", "DbName")
   

@@ -6,6 +6,9 @@
 * Method `NVDC` now calculates a p-value-weighted score
 * Many internal performance improvements
 
+# SynExtend 1.13.1.3
+* Adds `MakeBlastDb` function to create a BLAST database from R, plus associated documentation updates
+
 # SynExtend 1.11.8
 * Fixes various small bugs in `MoransI`
 * Adds some multiprocessing support (more will be added in the future)
