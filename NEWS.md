@@ -1,5 +1,6 @@
 # SynExtend 1.13.1.1
 * `SuperTree` now works directly with `dist` objects, providing better performance and scaling
+* `simMat` objects no longer throw a warning when initialized in RStudio
 * Updates to `NVDC.ProtWeaver`
   * Now supports amino acid sequences using the `DNAseqs=FALSE` argument
   * Now calculates a p-value-weighted score
