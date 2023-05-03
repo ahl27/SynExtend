@@ -1,6 +1,8 @@
-# SynExtend 1.13.1.1
+# SynExtend 1.13.1
 * `SuperTree` now works directly with `dist` objects, providing better performance and scaling
-* `simMat` objects no longer throw a warning when initialized in RStudio
+* Updates to `simMat` objects
+  * No longer throw a warning when initialized in RStudio
+  * Formatting is cleaner and supports larger object names
 * Updates to `NVDC.ProtWeaver`
   * Now supports amino acid sequences using the `DNAseqs=FALSE` argument
   * Now calculates a p-value-weighted score
@@ -12,6 +14,9 @@
 * Many internal performance improvements
   * Copied internal `.Call('cophenetic')` from `DECIPHER` to `SynExtend` to avoid potential namespace issues
   * Small fixes to remove some notes from `BiocCheck::BiocCheck()`
+
+# SynExtend 1.12.0
+* Official Bioconductor 3.17 release (even with SynExtend 1.11.8)
 
 # SynExtend 1.11.8
 * Fixes various small bugs in `MoransI`
