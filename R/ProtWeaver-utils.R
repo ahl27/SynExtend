@@ -228,7 +228,7 @@ RandCophProfiles.ProtWeaver <- function(pw, toEval=NULL, Verbose=TRUE,
       copvec <- combineDist(dummycoph, cop)
       pos <- which(copvec != 0)
       if (speciesCorrect){
-        copvec[pos] <- (copvec[pos] - specvec[pos]) / spv2[pos]
+        copvec[pos] <- (copvec[pos] - specd[pos]) / spv2[pos]
       }
       copvec <- .Call("randomProjection", copvec, 
                       pos, length(pos), outdim, 
@@ -1075,13 +1075,13 @@ fastCoph <- function(dend){
       h <- attr(x, "height") - attr(x[[k]], "height")
       I <- unlist(x[[k]])
       J <- seq_len(n)[-I]
-      d <<- .Call("cophenetic", 
+      d <<- .Call("se_cophenetic", 
                 I,
                 J,
                 n,
                 d,
                 h,
-                PACKAGE="DECIPHER")
+                PACKAGE="SynExtend")
       
     }
     x

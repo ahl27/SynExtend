@@ -36,6 +36,7 @@ SEXP calcDBrownValue(SEXP tnPtr, SEXP allLabels, SEXP iterNum, SEXP SD, SEXP STA
 SEXP pseudoRandomSample(SEXP N);
 SEXP randomProjection(SEXP VEC, SEXP NONZERO, SEXP N, SEXP OUTDIM, SEXP NTHREADS);
 SEXP seededPseudoRandomSample(SEXP N, SEXP SEED);
+SEXP se_cophenetic(SEXP Index1, SEXP Index2, SEXP N, SEXP D, SEXP H);
 
 /**** MoranI.c ****/
 SEXP MoransI(SEXP VALS, SEXP DIST, SEXP DIM);

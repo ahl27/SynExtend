@@ -28,6 +28,10 @@ MakeBlastDb(seqs, dbtype=c('prot', 'nucl'),
     Name of the resulting database. If not provided, defaults to
     a random string prefixed by \code{blastdb}.
   }
+  \item{dbpath}{
+    Path where database should be created. If not provided, 
+    defaults to \code{\link{TMPDIR}}.
+  }
   \item{extraArgs}{
     Additional arguments to be passed to the query
     executed on the command line. This should be a single character string.

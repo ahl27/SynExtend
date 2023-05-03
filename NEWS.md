@@ -1,13 +1,16 @@
 # SynExtend 1.13.1.1
 * `SuperTree` now works directly with `dist` objects, providing better performance and scaling
-
-# SynExtend 1.13.1.2
-* Method `NVDC` now supports amino acid sequences using the `DNAseqs=FALSE` argument
-* Method `NVDC` now calculates a p-value-weighted score
-* Many internal performance improvements
-
-# SynExtend 1.13.1.3
+* Updates to `NVDC.ProtWeaver`
+  * Now supports amino acid sequences using the `DNAseqs=FALSE` argument
+  * Now calculates a p-value-weighted score
 * Adds `MakeBlastDb` function to create a BLAST database from R, plus associated documentation updates
+* Smaller fixes to some `ProtWeaver` methods
+  * `predict.ProtWeaver` no longer returns using `invisible` (this was annoying and unneccessary)
+  * APC correction for `MutualInformation.ProtWeaver` removed to allow for parallelization
+  * `MirrorTree.ProtWeaver` now works correctly with `MTCorrection="speciestree"`
+* Many internal performance improvements
+  * Copied internal `.Call('cophenetic')` from `DECIPHER` to `SynExtend` to avoid potential namespace issues
+  * Small fixes to remove some notes from `BiocCheck::BiocCheck()`
 
 # SynExtend 1.11.8
 * Fixes various small bugs in `MoransI`

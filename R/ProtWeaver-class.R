@@ -210,7 +210,7 @@ predict.ProtWeaver <- function(object, Method='Ensemble', Subset=NULL, Processor
                     class=c('ProtWeb', 'simMat'))
   }
   
-  invisible(rs)
+  rs
 }
 
 SpeciesTree.ProtWeaver <- function(pw, Verbose=TRUE, Processors=1L){
