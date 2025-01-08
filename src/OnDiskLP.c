@@ -610,7 +610,7 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
   size_t cur_start, to_read;
-  int empty_bin;
+  int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
 
@@ -625,16 +625,17 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
     nmax_iterations++;
   }
   tmpniter = 0;
+  LT_total_bins = mergetree->nbins;
 
   // allocate space for the buffers
-  void **buffers = malloc(sizeof(void*)*num_bins);
-  for(int i=0; i<num_bins; i++) buffers[i] = malloc(buf_size*element_size);
+  void **buffers = safe_malloc(sizeof(void*)*num_bins);
+  for(int i=0; i<num_bins; i++) buffers[i] = safe_malloc(buf_size*element_size);
   GLOBAL_mergebuffers = buffers;
   GLOBAL_nbuffers = num_bins;
 
   long int *offsets, *remaining;
-  offsets = malloc(sizeof(long int)*num_bins);
-  remaining = malloc(sizeof(long int)*num_bins);
+  offsets = safe_calloc(LT_total_bins, sizeof(long int));
+  remaining = safe_calloc(LT_total_bins, sizeof(long int));
 
   fileptr = safe_fopen(f1, "rb+");
 
@@ -655,8 +656,6 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
 
     cur_start = 0;
     for(l_uint iter=0; iter<num_iter; iter++){
-      // DEBUG
-      Rprintf("\n\t%llu/%llu\n", iter, num_iter);
       // run one k-way merge operation
 
       // first initialize offsets and number of remaining values
@@ -667,8 +666,6 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
         cur_start = cur_start > (nlines) ? nlines : cur_start;
         remaining[i] = cur_start - offsets[i];
       }
-      // DEBUG
-      Rprintf("\tInitialized\n");
 
       // load data into the buffers and assign into tree
       for(int i=0; i<num_bins; i++){
@@ -681,16 +678,13 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
           offsets[i] += to_read;
         }
       }
-      // DEBUG
-      Rprintf("\tLoaded data\n");
 
       // merge all the data
       LT_initGame(mergetree);
-      // DEBUG
-      Rprintf("\tInit Game\n");
       while(mergetree->full_bins){
         // note cur_start is the first line of the *next* block
         empty_bin = LT_runInplaceFileGame(mergetree, cur_start, fileptr, remaining, &offsets);
+
         // refill the bin
         to_read = 0;
         if(remaining[empty_bin]){
@@ -715,8 +709,6 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
         // so the tree moves on to the next step prior to next pop
         LT_refillBin(mergetree, empty_bin, to_read, buffers[empty_bin]);
       }
-      // DEBUG
-      Rprintf("\tGame Done\n");
 
       // finally, call fdumpOutput to dump any remaining values
       // this doesn't need to call fdumpOutputInplace because there are no
@@ -734,9 +726,6 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
           }
         R_CheckUserInterrupt();
       }
-
-      // DEBUG
-      Rprintf("\tDumped Output\n");
     }
 
     mergetree->nwritten = 0;
@@ -783,7 +772,8 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
 
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
-  int cur_start, to_read, empty_bin;
+  size_t cur_start, to_read;
+  int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
 
@@ -800,14 +790,14 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   tmpniter = 0;
 
   // allocate space for the buffers
-  void **buffers = malloc(sizeof(void*)*num_bins);
-  for(int i=0; i<num_bins; i++) buffers[i] = malloc(buf_size*element_size);
+  void **buffers = safe_malloc(sizeof(void*)*num_bins);
+  for(int i=0; i<num_bins; i++) buffers[i] = safe_malloc(buf_size*element_size);
   GLOBAL_mergebuffers = buffers;
   GLOBAL_nbuffers = num_bins;
 
   long int *offsets, *remaining;
-  offsets = malloc(sizeof(long int)*num_bins);
-  remaining = malloc(sizeof(long int)*num_bins);
+  offsets = safe_calloc(LT_total_bins, sizeof(long int));
+  remaining = safe_calloc(LT_total_bins, sizeof(long int));
 
   const char *cur_source = f1;
   const char *cur_target = f2;
@@ -2097,7 +2087,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(verbose) report_time(time1, time2, "\t");
 
   // allocate space for leaf counters
-  GLOBAL_all_leaves = malloc(sizeof(leaf *) * (num_v+1));
+  GLOBAL_all_leaves = safe_malloc(sizeof(leaf *) * (num_v+1));
 
   // next, reformat the file to get final counts for each node
   if(verbose) Rprintf("Tidying up internal tables...\n");
