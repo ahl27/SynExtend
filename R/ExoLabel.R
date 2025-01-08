@@ -103,10 +103,9 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(verbose) cat("Temporary files stored at ", tempfiledir, "\n")
 
   seps <- paste(sep, "\n", sep='')
-  ctr <- 0
 
   .Call("R_LPOOM_cluster", edgelistfiles, length(edgelistfiles),
-        tempfiledir, outfile, seps, ctr, iterations,
+        tempfiledir, outfile, seps, iterations,
         verbose, is_undirected, add_self_loops, ignore_weights, normalize_weights,
         consensus_cluster, inflation, !use_fast_sort)
 

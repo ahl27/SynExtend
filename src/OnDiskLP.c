@@ -610,7 +610,7 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
   size_t cur_start, to_read;
-  int empty_bin;
+  int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
 
@@ -625,16 +625,17 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
     nmax_iterations++;
   }
   tmpniter = 0;
+  LT_total_bins = mergetree->nbins;
 
   // allocate space for the buffers
-  void **buffers = malloc(sizeof(void*)*num_bins);
-  for(int i=0; i<num_bins; i++) buffers[i] = malloc(buf_size*element_size);
+  void **buffers = safe_malloc(sizeof(void*)*num_bins);
+  for(int i=0; i<num_bins; i++) buffers[i] = safe_malloc(buf_size*element_size);
   GLOBAL_mergebuffers = buffers;
   GLOBAL_nbuffers = num_bins;
 
   long int *offsets, *remaining;
-  offsets = malloc(sizeof(long int)*num_bins);
-  remaining = malloc(sizeof(long int)*num_bins);
+  offsets = safe_calloc(LT_total_bins, sizeof(long int));
+  remaining = safe_calloc(LT_total_bins, sizeof(long int));
 
   fileptr = safe_fopen(f1, "rb+");
 
@@ -683,6 +684,7 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
       while(mergetree->full_bins){
         // note cur_start is the first line of the *next* block
         empty_bin = LT_runInplaceFileGame(mergetree, cur_start, fileptr, remaining, &offsets);
+
         // refill the bin
         to_read = 0;
         if(remaining[empty_bin]){
@@ -770,7 +772,8 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
 
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
-  int cur_start, to_read, empty_bin;
+  size_t cur_start, to_read;
+  int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
 
@@ -787,14 +790,14 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   tmpniter = 0;
 
   // allocate space for the buffers
-  void **buffers = malloc(sizeof(void*)*num_bins);
-  for(int i=0; i<num_bins; i++) buffers[i] = malloc(buf_size*element_size);
+  void **buffers = safe_malloc(sizeof(void*)*num_bins);
+  for(int i=0; i<num_bins; i++) buffers[i] = safe_malloc(buf_size*element_size);
   GLOBAL_mergebuffers = buffers;
   GLOBAL_nbuffers = num_bins;
 
   long int *offsets, *remaining;
-  offsets = malloc(sizeof(long int)*num_bins);
-  remaining = malloc(sizeof(long int)*num_bins);
+  offsets = safe_calloc(LT_total_bins, sizeof(long int));
+  remaining = safe_calloc(LT_total_bins, sizeof(long int));
 
   const char *cur_source = f1;
   const char *cur_target = f2;
@@ -1246,7 +1249,7 @@ l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile, l_uint max_see
     fseek(csrfile, cur_index*L_SIZE, SEEK_SET);
     safe_fwrite(&(l->count), L_SIZE, 1, csrfile);
 
-    // set count (cluster) to index+1 (note cur_index incremented above)
+    // set count (cluster) to index+1
     l->count = cur_index+1;
   }
   while(ctr < bits_remaining)
@@ -1623,6 +1626,7 @@ void update_node_cluster(l_uint ind, double inflation, float self_loop_weight,
   qsort(indices, num_edges, L_SIZE, leaf_index_compar);
   double max_weight, cur_weight=0, cur_error=0;
   l_uint max_clust=0, cur_clust=neighbors[num_edges]->count;
+
   if(num_edges && neighbors[indices[0]]->count == cur_clust){
     cur_weight += self_loop_weight;
     self_loop_weight = 0;
@@ -1645,10 +1649,14 @@ void update_node_cluster(l_uint ind, double inflation, float self_loop_weight,
     if(weights_arr[indices[i]])
       kahan_accu(&cur_weight, &cur_error, weights_arr[indices[i]]);
   }
-  if(max_weight < cur_weight){
+
+  if(max_weight < cur_weight || max_clust == 0){
+    // max_clust == 0 case is for when the node has no edges,
+    // which would skip the above loop and assign the node to 0 (invalid)
     max_weight = cur_weight;
     max_clust = cur_clust;
   }
+
   // have to actually write the new cluster
   neighbors[num_edges]->count = max_clust;
 
@@ -1949,6 +1957,7 @@ l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *clust_map
       if(current_bit == 0){
         // read in the cluster (stored in leaf node at count)
         l_uint tmpval = ((leaf *)(trie->child_nodes[0]))->count;
+
         tmpval--; // decrement to make them 0-indexed
         if(!clust_mapping[tmpval]){
           clust_mapping[tmpval] = CLUST_MAP_CTR++;
@@ -2000,7 +2009,7 @@ l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *clust_map
 
 SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILE,  // more files
-                    SEXP SEPS, SEXP CTR, SEXP ITER, SEXP VERBOSE, // control flow
+                    SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
                     SEXP IGNORE_WEIGHTS, SEXP NORMALIZE_WEIGHTS,
                     SEXP CONSENSUS_WEIGHTS, SEXP INFLATION_POW,
@@ -2048,7 +2057,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int num_edgefiles = INTEGER(NUM_EFILES)[0];
   aq_int num_iter = INTEGER(ITER)[0];
   const int verbose = LOGICAL(VERBOSE)[0];
-  l_uint num_v = (l_uint)(REAL(CTR)[0]);
+  l_uint num_v = 0;
 
   // optional parameters
   const int is_undirected = LOGICAL(IS_UNDIRECTED)[0];
@@ -2078,7 +2087,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(verbose) report_time(time1, time2, "\t");
 
   // allocate space for leaf counters
-  GLOBAL_all_leaves = malloc(sizeof(leaf *) * (num_v+1));
+  GLOBAL_all_leaves = safe_malloc(sizeof(leaf *) * (num_v+1));
 
   // next, reformat the file to get final counts for each node
   if(verbose) Rprintf("Tidying up internal tables...\n");
@@ -2088,6 +2097,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
 
   l_uint max_degree = reindex_trie_and_write_counts(GLOBAL_trie, tempcounts, 0);
   fclose_tracked(1);
+
   if(verbose) Rprintf("\tFound %" lu_fprint " unique vertices!\n", num_v);
   if(!num_iter){
     max_degree = (l_uint)(sqrt((double)max_degree)) + 1 + add_self_loops;
@@ -2139,13 +2149,11 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
 
   if(verbose) report_time(time1, time2, "\t");
 
-  //if(add_self_loops && verbose) Rprintf("Adding self loops...\n");
-  //if(add_self_loops) add_self_loops_to_csrfile(tabfile, weightsfile, neighborfile, num_v, self_loop_weight);
-
   if(verbose && should_normalize) Rprintf("Normalizing edge weights...\n");
   if(should_normalize) normalize_csr_edgecounts_batch(tabfile, weightsfile, num_v, verbose, self_loop_weight);
 
   reset_trie_clusters(num_v);
+
   time1 = clock();
   if(consensus_len){
     consensus_cluster_oom(tabfile, weightsfile, neighborfile, dir, num_v,

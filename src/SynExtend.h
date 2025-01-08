@@ -65,7 +65,7 @@ SEXP do_dendrapply(SEXP tree, SEXP fn, SEXP env, SEXP order);
 void cleanup_ondisklp_global_values(void);
 SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES,
                     SEXP OUTDIR, SEXP OUTFILE,
-                    SEXP SEPS, SEXP CTR, SEXP ITER, SEXP VERBOSE,
+                    SEXP SEPS, SEXP ITER, SEXP VERBOSE,
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, SEXP IGNORE_WEIGHTS, SEXP NORMALIZE_WEIGHTS,
                     SEXP CONSENSUS_WEIGHTS, SEXP INFLATION_POW, SEXP SORT_INPLACE);
 //SEXP R_TestRW(SEXP FILES, SEXP DIR);
