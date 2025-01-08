@@ -655,6 +655,8 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
 
     cur_start = 0;
     for(l_uint iter=0; iter<num_iter; iter++){
+      // DEBUG
+      Rprintf("\n\t%llu/%llu\n", iter, num_iter);
       // run one k-way merge operation
 
       // first initialize offsets and number of remaining values
@@ -665,6 +667,8 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
         cur_start = cur_start > (nlines) ? nlines : cur_start;
         remaining[i] = cur_start - offsets[i];
       }
+      // DEBUG
+      Rprintf("\tInitialized\n");
 
       // load data into the buffers and assign into tree
       for(int i=0; i<num_bins; i++){
@@ -677,9 +681,13 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
           offsets[i] += to_read;
         }
       }
+      // DEBUG
+      Rprintf("\tLoaded data\n");
 
       // merge all the data
       LT_initGame(mergetree);
+      // DEBUG
+      Rprintf("\tInit Game\n");
       while(mergetree->full_bins){
         // note cur_start is the first line of the *next* block
         empty_bin = LT_runInplaceFileGame(mergetree, cur_start, fileptr, remaining, &offsets);
@@ -707,6 +715,8 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
         // so the tree moves on to the next step prior to next pop
         LT_refillBin(mergetree, empty_bin, to_read, buffers[empty_bin]);
       }
+      // DEBUG
+      Rprintf("\tGame Done\n");
 
       // finally, call fdumpOutput to dump any remaining values
       // this doesn't need to call fdumpOutputInplace because there are no
@@ -724,6 +734,9 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
           }
         R_CheckUserInterrupt();
       }
+
+      // DEBUG
+      Rprintf("\tDumped Output\n");
     }
 
     mergetree->nwritten = 0;
@@ -2084,7 +2097,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(verbose) report_time(time1, time2, "\t");
 
   // allocate space for leaf counters
-  GLOBAL_all_leaves = malloc(sizeof(leaf *) * (num_v));
+  GLOBAL_all_leaves = malloc(sizeof(leaf *) * (num_v+1));
 
   // next, reformat the file to get final counts for each node
   if(verbose) Rprintf("Tidying up internal tables...\n");
