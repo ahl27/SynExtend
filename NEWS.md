@@ -1,3 +1,7 @@
+# SynExtend 1.19.2
+* Lots of bug fixes for `ExoLabel`
+* `ExoLabel` now reports disk consumption during execution
+
 # SynExtend 1.19.1
 * `ExoLabel` is even faster due to in-place external sort for faster file I/O
 * Other quality of life improvements to `ExoLabel`
