@@ -10,7 +10,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  on.exit(.C("cleanup_ondisklp_global_values"))
   if(!is.numeric(iterations)){
     stop("'iterations' must be an integer or numeric.")
   } else {
@@ -96,6 +95,15 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else {
     dir.create(tempfiledir, recursive = TRUE)
   }
+
+  ## have to declare this here so we can also clean up the temporary directory
+  on.exit(\(){
+    .C("cleanup_ondisklp_global_values")
+    for(f in list.files(tempfiledir, full.names=TRUE))
+      file.remove(f)
+    file.remove(tempfiledir)
+  })
+
   mode <- match.arg(mode)
   is_undirected <- mode == "undirected"
   outfile <- file.path(normalizePath(dirname(outfile), mustWork=TRUE), basename(outfile))
