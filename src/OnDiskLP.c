@@ -307,6 +307,49 @@ ll* insert_ll(ll* head, l_uint id, float w){
   return head;
 }
 
+/********************/
+/* Output Functions */
+/********************/
+
+void report_time(clock_t start, clock_t end, const char* prefix){
+  double elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC;
+  double secs;
+  int mins, hours, days;
+  secs = fmod(elapsed_time, 60);
+
+  int elapsed_secs = (int)(elapsed_time - secs);
+  days = elapsed_secs / 86400;
+  elapsed_secs %= 86400;
+
+  hours = elapsed_secs / 3600;
+  elapsed_secs %= 3600;
+
+  mins = elapsed_secs / 60;
+
+  Rprintf("%sTime difference of ", prefix);
+  if(days) Rprintf("%d days, ", days);
+  if(hours) Rprintf("%d hrs, ", hours);
+  if(mins) Rprintf("%d mins, ", mins);
+  if(mins) Rprintf("%d secs\n", (int)secs);
+  else Rprintf("%0.2f secs\n", secs);
+  return;
+}
+
+void report_filesize(l_uint bytes){
+  // this will assume the file pointer is already at the end
+  double nbytes = (double)bytes;
+  char units[] = {' ', 'K', 'M', 'G', 'T', 'P'};
+  char unit_out[] = " B";
+  int cur_pos = 0;
+  while(nbytes > 1000 && cur_pos < 6){
+    nbytes /= 1000;
+    cur_pos++;
+  }
+  unit_out[0] = units[cur_pos];
+  Rprintf("%5.1f%s", nbytes, unit_out);
+  return;
+}
+
 /************************/
 /* Arithmetic Functions */
 /************************/
@@ -613,6 +656,7 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
   int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
+  l_uint cur_fsize, max_fsize=0;
 
   if(num_bins > (nlines / block_size)){
     num_bins = nlines/block_size + !!(nlines % block_size);
@@ -645,8 +689,12 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
     prev_progress = 0.0;
 
     tmpniter++;
-    if(verbose) Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
-        tmpniter, nmax_iterations, cur_progress);
+    if(verbose){
+      Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+                              tmpniter, nmax_iterations, cur_progress);
+      report_filesize(max_fsize);
+      Rprintf(")  \r");
+    }
     R_CheckUserInterrupt();
 
     // number of blocks
@@ -699,9 +747,14 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
         if(cur_progress - prev_progress > 0.5){
           prev_progress = cur_progress;
           if(verbose){
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
+            if(tmpniter == 1){
+              cur_fsize = ftell(fileptr);
+              if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+            }
+            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
-
+            report_filesize(max_fsize);
+            Rprintf(")  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -720,9 +773,14 @@ void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
       if(cur_progress - prev_progress > 0.5 || cur_progress == 100){
           prev_progress = cur_progress;
           if(verbose){
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
+            if(tmpniter == 1){
+              cur_fsize = ftell(fileptr);
+              if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+            }
+            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
-
+            report_filesize(max_fsize);
+            Rprintf(")  \r");
           }
         R_CheckUserInterrupt();
       }
@@ -776,6 +834,7 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
+  l_uint cur_fsize, max_fsize=0;
 
   if(num_bins > (nlines / block_size)){
     num_bins = nlines/block_size + !!(nlines % block_size);
@@ -788,6 +847,7 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
     nmax_iterations++;
   }
   tmpniter = 0;
+  LT_total_bins = mergetree->nbins;
 
   // allocate space for the buffers
   void **buffers = safe_malloc(sizeof(void*)*num_bins);
@@ -807,8 +867,12 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
     prev_progress = 0.0;
 
     tmpniter++;
-    if(verbose) Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
-        tmpniter, nmax_iterations, cur_progress);
+    if(verbose){
+      Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+                        tmpniter, nmax_iterations, cur_progress);
+      report_filesize(max_fsize);
+      Rprintf(")  \r");
+    }
     R_CheckUserInterrupt();
 
     file1 = safe_fopen(cur_source, "rb");
@@ -861,9 +925,14 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
         if(cur_progress - prev_progress > 0.5){
           prev_progress = cur_progress;
           if(verbose){
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
+            if(tmpniter == 1){
+              cur_fsize = ftell(file1) + ftell(file2);
+              if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+            }
+            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
-
+            report_filesize(max_fsize);
+            Rprintf(")  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -875,9 +944,14 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
       if(cur_progress - prev_progress > 0.5 || cur_progress == 100){
         prev_progress = cur_progress;
         if(verbose){
-          Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \r",
+          if(tmpniter == 1){
+            cur_fsize = ftell(file1) + ftell(file2);
+            if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+          }
+          Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
-
+          report_filesize(max_fsize);
+          Rprintf(")  \r");
         }
         R_CheckUserInterrupt();
       }
@@ -887,6 +961,7 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
     }
     mergetree->nwritten = 0;
     block_size *= num_bins;
+
     fclose_tracked(2);
     tmp_swap_char = cur_source;
     cur_source = cur_target;
@@ -894,8 +969,13 @@ void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   }
   // cur_source will always be the file we just WROTE to here
 
-  if(verbose) Rprintf("\tIteration %llu of %llu (%6.01f%% complete)       \n",
-                      tmpniter, nmax_iterations, 100.0);
+  if(verbose){
+    Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+                      tmpniter, nmax_iterations, cur_progress);
+    report_filesize(max_fsize);
+    Rprintf(")  \r");
+  }
+  R_CheckUserInterrupt();
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
 
@@ -1066,30 +1146,6 @@ void copy_weightsfile_sig(const char* dest, const char* src, l_uint num_edges, c
 /* Main Functions */
 /******************/
 
-void report_time(clock_t start, clock_t end, const char* prefix){
-  double elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-  double secs;
-  int mins, hours, days;
-  secs = fmod(elapsed_time, 60);
-
-  int elapsed_secs = (int)(elapsed_time - secs);
-  days = elapsed_secs / 86400;
-  elapsed_secs %= 86400;
-
-  hours = elapsed_secs / 3600;
-  elapsed_secs %= 3600;
-
-  mins = elapsed_secs / 60;
-
-  Rprintf("%sTime difference of ", prefix);
-  if(days) Rprintf("%d days, ", days);
-  if(hours) Rprintf("%d hrs, ", hours);
-  if(mins) Rprintf("%d mins, ", mins);
-  if(mins) Rprintf("%d secs\n", (int)secs);
-  else Rprintf("%0.2f secs\n", secs);
-  return;
-}
-
 void unique_strings_with_sideeffects(char **names, int num_to_sort, int *InsertPoint, uint *counts, int useCounts){
   /*
    * This code is duplicated a lot, so just putting it here for consistency
@@ -1230,7 +1286,7 @@ h_uint hash_file_vnames_trie(const char* fname, prefix *trie, h_uint next_index,
   return next_index;
 }
 
-l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile, l_uint max_seen){
+l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile, l_uint max_seen, int verbose, l_uint* nseen){
   // Vertices are 0-indexed
   // assume that we've already opened the file, since we'll call this recursively
   // I'm NOT going to reindex, since the read indices will be better for cache locality
@@ -1251,9 +1307,14 @@ l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile, l_uint max_see
 
     // set count (cluster) to index+1
     l->count = cur_index+1;
+    (*nseen)++;
+    if(((*nseen)+1) % PRINT_COUNTER_MOD == 0){
+      R_CheckUserInterrupt();
+      if(verbose) Rprintf("\tProcessed %" lu_fprint " vertices\r", *nseen);
+    }
   }
   while(ctr < bits_remaining)
-    max_seen = reindex_trie_and_write_counts(trie->child_nodes[ctr++], csrfile, max_seen);
+    max_seen = reindex_trie_and_write_counts(trie->child_nodes[ctr++], csrfile, max_seen, verbose, nseen);
 
   return max_seen;
 }
@@ -1695,7 +1756,7 @@ void cluster_file(const char* offsets_fname, const char* weights_fname, const ch
   GLOBAL_queue = init_array_queue(num_v, max_iterations);
   if(v) Rprintf("done.\n\tClustering network:\n");
 
-  if(v) Rprintf("\t0%% complete %s", progress[++statusctr%progbarlen]);
+  if(v) Rprintf("\t0.0%% complete %s", progress[++statusctr%progbarlen]);
   /*
    * TODO: we can parallelize this, right?
    *    - set up the number of threads
@@ -2095,7 +2156,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   FILE *tempcounts = safe_fopen(temptabfile, "wb");
   if(!tempcounts) error("could not open file %s\n", temptabfile);
 
-  l_uint max_degree = reindex_trie_and_write_counts(GLOBAL_trie, tempcounts, 0);
+  l_uint print_val = 0;
+  l_uint max_degree = reindex_trie_and_write_counts(GLOBAL_trie, tempcounts, 0, verbose, &print_val);
   fclose_tracked(1);
 
   if(verbose) Rprintf("\tFound %" lu_fprint " unique vertices!\n", num_v);
