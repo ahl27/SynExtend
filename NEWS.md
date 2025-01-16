@@ -1,3 +1,7 @@
+# SynExtend 1.19.3
+* `ExoLabel` will no longer crash when given a network lacking a trailing newline
+* Various internal improvements and code refinements
+
 # SynExtend 1.19.2
 * Lots of bug fixes for `ExoLabel`
 * `ExoLabel` now reports disk consumption during execution
