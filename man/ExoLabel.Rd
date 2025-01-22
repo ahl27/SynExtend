@@ -167,6 +167,27 @@ if(file.exists(edgefile)) file.remove(edgefile)
 writeLines(all_edges, edgefile)
 res <- ExoLabel(edgefile, return_table=TRUE)
 print(res)
+
+###########################
+### Multiple Clustering ###
+###########################
+
+## Run with multiple inflation values
+tfs <- replicate(3, tempfile())
+p1 <- ExoLabel(edgefile, tfs,
+                inflation=c(2,3,4),
+                return_table = TRUE)
+
+## Run with multiple add_self_loops values
+p2 <- ExoLabel(edgefile, tfs,
+                add_self_loops=c(0,0.5,1),
+                return_table = TRUE)
+
+## Vary both parameters
+p3 <- ExoLabel(edgefile, tfs,
+                inflation=c(2,3,4),
+                add_self_loops=c(0,0.5,1),
+                return_table = TRUE)
 }
 
 \seealso{
