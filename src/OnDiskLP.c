@@ -533,9 +533,10 @@ static void truncate_file(const char* fname, size_t size){
   retval = truncate(fname, size);
 #else
   #ifdef WIN32
-    int filehandler = _open(fname, _O_BINARY | _O_RDWR);
+    FILE* f = fopen(fname, "rb+");
+    int filehandler = _fileno(f);
     retval = _chsize_s(filehandler, size);
-    _close(filehandler);
+    fclose(f);
   #else
     return;
   #endif
