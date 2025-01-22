@@ -2,7 +2,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
                           ignore_weights=FALSE,
-                          normalize_weights=FALSE,
                           iterations=0L, inflation=1.05,
                           return_table=FALSE,
                           consensus_cluster=FALSE,
@@ -28,31 +27,24 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
     warning("Invalid value of 'iterations', will determine automatically from node degree.")
     iterations <- 0L
   }
-  if(is.infinite(inflation) || is.na(inflation) || inflation < 0){
-    warning("Invalid value of 'inflation', defaulting to 1.0")
-    inflation <- 1.0
+  if(any(is.infinite(inflation)) || any(is.na(inflation)) || any(inflation < 0)){
+    warning("Some invalid value of 'inflation', defaulting to 1.0")
+    p <- is.infinite(inflation) | is.na(inflation) | inflation < 0
+    inflation[p] <- 1.0
   }
   if(!is.numeric(add_self_loops) && !is.logical(add_self_loops)){
     stop("value of 'add_self_loops' should be numeric or logical")
   }
-  if(add_self_loops < 0){
+  if(any(add_self_loops < 0)){
     warning("self loops weight supplied is negative, setting to zero.")
-    add_self_loops <- 0
+    add_self_loops[add_self_loops < 0] <- 0
   } else if(is.logical(add_self_loops)){
-    add_self_loops <- ifelse(add_self_loops, 1, 0)
+    add_self_loops <- rep(ifelse(add_self_loops, 1, 0), length(outfile))
   }
   if(!is.logical(ignore_weights)){
     stop("'ignore_weights' must be logical")
   } else if(is.na(ignore_weights) || is.null(ignore_weights)){
     stop("invalid value for 'ignore_weights' (should be TRUE or FALSE)")
-  }
-  if(!is.logical(normalize_weights)){
-    stop("'normalize_weights' must be logical")
-  } else if(is.na(normalize_weights) || is.null(normalize_weights)){
-    stop("invalid value for 'normalize_weights' (should be TRUE or FALSE)")
-  }
-  if(ignore_weights && normalize_weights){
-    warning("Cannot both ignore weights and normalize them")
   }
   if(ignore_weights && (add_self_loops != 0 || add_self_loops != 1)){
     warning("Weight specified for 'add_self_loops' will be ignored")
@@ -60,6 +52,16 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   }
   if(!is.logical(use_fast_sort)){
     stop("invalid value for 'use_fast_sort' (should be TRUE or FALSE)")
+  }
+  if(length(inflation) == 1){
+    inflation <- rep(inflation, length(outfile))
+  }
+  if(length(add_self_loops) == 1){
+    add_self_loops <- rep(add_self_loops, length(outfile))
+  }
+  if(length(outfile) != length(inflation) || length(outfile) != length(add_self_loops)){
+    stop("If more than one outfile is provided, 'inflation' and 'add_self_loops' must be the ",
+         "either the same length as 'outfile' or length 1.")
   }
   # verify that the first few lines of each file are correct
   if(!all(file.exists(edgelistfiles))) stop("edgelist file does not exist")
@@ -96,6 +98,15 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
     dir.create(tempfiledir, recursive = TRUE)
   }
 
+  for(i in seq_along(outfile)){
+    d <- dirname(outfile[i])
+    if(!dir.exists(d)){
+      dir.create(d, recursive=TRUE)
+    }
+    d <- normalizePath(d, mustWork = TRUE)
+    outfile[i] <- file.path(d, basename(outfile[i]))
+  }
+
   ## have to declare this here so we can also clean up the temporary directory
   on.exit(\(){
     .C("cleanup_ondisklp_global_values")
@@ -114,20 +125,31 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
 
   .Call("R_LPOOM_cluster", edgelistfiles, length(edgelistfiles),
         tempfiledir, outfile, seps, iterations,
-        verbose, is_undirected, add_self_loops, ignore_weights, normalize_weights,
+        verbose, is_undirected, add_self_loops, ignore_weights,
         consensus_cluster, inflation, !use_fast_sort)
 
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
   file.remove(tempfiledir)
-  if(return_table){
-    tab <- read.table(outfile, sep=sep)
-    colnames(tab) <- c("Vertex", "Cluster")
-    if(file.exists(outfile)) file.remove(outfile)
-    return(tab)
-  } else {
-    return(outfile)
+  retval <- list()
+  for(i in seq_along(outfile)){
+    if(return_table){
+      tab <- read.table(outfile, sep=sep)
+      colnames(tab) <- c("Vertex", "Cluster")
+      if(file.exists(outfile)) file.remove(outfile)
+      retval[[i]] <- list(parameters=c(inflation=inflation[i],
+                                      add_self_loops=add_self_loops[i]),
+                          results=tab)
+      return(tab)
+    } else {
+      retval[[i]] <- list(parameters=c(inflation=inflation[i],
+                                       add_self_loops=add_self_loops[i]),
+                          results=outfile[i])
+    }
   }
+
+  if(length(retval) == 1) return(retval[[1]])
+  return(retval)
 }
 
 EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
