@@ -134,13 +134,12 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   retval <- list()
   for(i in seq_along(outfile)){
     if(return_table){
-      tab <- read.table(outfile, sep=sep)
+      tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")
-      if(file.exists(outfile)) file.remove(outfile)
+      if(file.exists(outfile[i])) file.remove(outfile[i])
       retval[[i]] <- list(parameters=c(inflation=inflation[i],
                                       add_self_loops=add_self_loops[i]),
                           results=tab)
-      return(tab)
     } else {
       retval[[i]] <- list(parameters=c(inflation=inflation[i],
                                        add_self_loops=add_self_loops[i]),
