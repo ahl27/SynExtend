@@ -243,6 +243,7 @@ static void reorganize_blocks(LoserTree *tree, size_t block_end, FILE *f,
   int nbins = tree->nbins;
   long int write_start, write_end, read_start, read_end, to_read;
 
+  size_t num_read;
   int last_bin = nbins-1;
   while(!remaining[last_bin]) last_bin--;
   write_end = block_end;
@@ -259,9 +260,9 @@ static void reorganize_blocks(LoserTree *tree, size_t block_end, FILE *f,
         read_start = read_end - to_read;
         write_start = write_end - to_read;
         fseek(f, read_start*size, SEEK_SET);
-        fread(scratch_buf, size, to_read, f);
+        safe_fread(scratch_buf, size, to_read, f);
         fseek(f, write_start*size, SEEK_SET);
-        fwrite(scratch_buf, size, to_read, f);
+        safe_fwrite(scratch_buf, size, to_read, f);
         read_end = read_start;
         write_end = write_start;
       }

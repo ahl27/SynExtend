@@ -1,3 +1,7 @@
+# SynExtend 1.19.4
+* fixes bug that prevented building on Windows
+* adds multiple clustering support for ExoLabel
+
 # SynExtend 1.19.3
 * `ExoLabel` will no longer crash when given a network lacking a trailing newline
 * Various internal improvements and code refinements

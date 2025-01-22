@@ -13,7 +13,6 @@ ExoLabel(edgelistfiles,
               mode=c("undirected", "directed"),
               add_self_loops=FALSE,
               ignore_weights=FALSE,
-              normalize_weights=FALSE,
               iterations=0L,
               inflation=1.05,
               return_table=FALSE,
@@ -30,7 +29,7 @@ Character vector of files to be processed. Each entry should be a machine-interp
 }
 
 \item{outfile}{
-File to write final clusters to. Optional, defaults to a temporary file.
+File to write final clusters to. Optional, defaults to a temporary file. Can be set to a vector of filepaths to run multiple clusterings (see Details).
 }
 
 \item{mode}{
@@ -38,15 +37,11 @@ String specifying whether edges should be interpreted as undirected (default) or
 }
 
 \item{add_self_loops}{
-Should self loops be added to the network? If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes.
+Should self loops be added to the network? If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
 }
 
 \item{ignore_weights}{
 Should weights be ignored? If \code{TRUE}, all edges will be treated as an edge of weight 1. Must be set to \code{TRUE} if any of \code{edgelistfiles} are two-column tables (start->end only, lacking a weights column).
-}
-
-\item{normalize_weights}{
-Should weights be normalized? If \code{TRUE}, each vertex's edge weights are normalized such that the sum of outgoing edge weights is 1. This normalization is done after adding self loops.
 }
 
 \item{iterations}{
@@ -54,7 +49,7 @@ Maximum number of times to process each node. If set to zero or \code{NULL}, aut
 }
 
 \item{inflation}{
-Inflation parameter for edges. See "Algorithm Convergence" below for a description of this parameter. Higher values speed up algorithm convergence but produce smaller clusters. Defaults to 1.05; set to 1.0 to disable inflation.
+Inflation parameter for edges. See "Algorithm Convergence" below for a description of this parameter. Higher values speed up algorithm convergence but produce smaller clusters. Defaults to 1.05; set to 1.0 to disable inflation. Can be set to a vector of values when running multiple clusterings (see Details).
 }
 
 \item{return_table}{
@@ -108,14 +103,26 @@ One of the main issues of Label Propagation algorithms is that they can fail to 
 Here \eqn{w} is the original edge weight, \eqn{w'} is the new edge weight, and \eqn{n} is the number of times we've already processed the node. After this transformation, the edge weights are renormalized, meaning that large weights tend to get larger, and small weights tend to get smaller. Logarithms prevent the exponents from growing too large, and base 2 is chosen for computational efficiency.
 }
 
+\section{Multiple Clusterings}{
+A large portion of the processing time is reading in the graph object. This leads to a lot of duplicated effort when trying to cluster the same network with multiple parameters.
+
+Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile}, \code{inflation}, and \code{add_self_loops}. If the length of \code{outfile} is greater than 1, both \code{inflation} and \code{add_self_loops} can be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
+}
+
 \section{Consensus Clustering}{
 Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}. Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to a sigmoid function. By default, this runs nine times for sigmoids with scale 0.5 and shape \code{c(0,0.2,0.4,0.6,0.8,1.0,1.33,1.67,2.0)}, collapsing weights below 0.1 to zero. The resulting clusters form a network such that the edge weight between any two nodes connected in the initial graph is the proportion of clusters they shared over clustering runs. This network is used for a final label propagation run, which identifies the consensus clusters. Users can specify a numeric vector as input to \code{consensus_cluster}, which will override the default shape parameters and number of iterations.
 }
 
 \value{
-If \code{return_table=TRUE}, returns a \code{\link{data.frame}} object with two columns. The first column contains the name of each vertex, and the second column contains the cluster it was assigned to.
+Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has two entries, \code{parameters} and \code{results}.
 
-If \code{return_table=FALSE}, returns a character vector of length 1. This vector contains the path to the file where clusters were written to. The file is formatted as a \code{.tsv}, with each line containing two tab separated columns (vertex name, assigned cluster)
+\code{parameters} is a named vector with the values of \code{inflation} and \code{add_self_loops} used for the clustering.
+
+\code{results} differs depending on the value of \code{return_table}.
+
+If \code{return_table=TRUE}, \code{results} is a \code{\link{data.frame}} object with two columns. The first column contains the name of each vertex, and the second column contains the cluster it was assigned to.
+
+If \code{return_table=FALSE}, \code{results} is a character vector of length 1. This vector contains the path to the file where clusters were written to. The file is formatted as a \code{.tsv}, with each line containing two tab separated columns (vertex name, assigned cluster).
 }
 
 \references{
@@ -160,6 +167,27 @@ if(file.exists(edgefile)) file.remove(edgefile)
 writeLines(all_edges, edgefile)
 res <- ExoLabel(edgefile, return_table=TRUE)
 print(res)
+
+###########################
+### Multiple Clustering ###
+###########################
+
+## Run with multiple inflation values
+tfs <- replicate(3, tempfile())
+p1 <- ExoLabel(edgefile, tfs,
+                inflation=c(2,3,4),
+                return_table = TRUE)
+
+## Run with multiple add_self_loops values
+p2 <- ExoLabel(edgefile, tfs,
+                add_self_loops=c(0,0.5,1),
+                return_table = TRUE)
+
+## Vary both parameters
+p3 <- ExoLabel(edgefile, tfs,
+                inflation=c(2,3,4),
+                add_self_loops=c(0,0.5,1),
+                return_table = TRUE)
 }
 
 \seealso{

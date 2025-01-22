@@ -29,6 +29,57 @@ void *safe_realloc(void *ptr, size_t new_size){
   return ptr;
 }
 
+/**************************/
+/* File Function Wrappers */
+/**************************/
+
+size_t safe_fread(void *buffer, size_t size, size_t count, FILE *stream){
+  size_t found_values = fread(buffer, size, count, stream);
+  if(found_values != count){
+    // two scenarios:
+
+    // 1. read past the end of the file (throw error and return)
+    if(feof(stream))
+      error("%s", "Internal error: fread tried to read past end of file.\n");
+
+    // 2. some undefined reading error (retry a few times and then return)
+    for(int i=0; i<MAX_READ_RETRIES; i++){
+      // if we read a partial value, reset the counter back
+      if(found_values) fseek(stream, -1*((int)found_values), SEEK_CUR);
+
+      // try to read again
+      found_values = fread(buffer, size, count, stream);
+      if(found_values == count) return found_values;
+    }
+
+    // otherwise throw an error
+    error("Internal error: fread read %zu values (expected %zu).\n", found_values, count);
+  }
+  return found_values;
+}
+
+size_t safe_fwrite(void *buffer, size_t size, size_t count, FILE *stream){
+  size_t written_values = fwrite(buffer, size, count, stream);
+  if(written_values != count){
+    // same scenarios as in safe_fread
+    if(feof(stream))
+      error("%s", "Internal error: fread tried to read past end of file.\n");
+
+    for(int i=0; i<MAX_WRITE_RETRIES; i++){
+      // if we read a partial value, reset the counter back
+      if(written_values) fseek(stream, -1*((int)written_values), SEEK_CUR);
+
+      // try to read again
+      written_values = fwrite(buffer, size, count, stream);
+      if(written_values == count) return count;
+    }
+
+    // otherwise throw an error
+    error("Internal error: fwrite wrote %zu values (expected %zu).\n", written_values, count);
+  }
+  return written_values;
+}
+
 int *sample(int n){
   int *r = malloc(sizeof(int) * n);
   int j;
