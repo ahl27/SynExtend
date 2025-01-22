@@ -20,6 +20,12 @@ void *safe_calloc(size_t nitems, size_t size);
 void *safe_realloc(void *ptr, size_t new_size);
 
 
+/*** File read/write wrappers ***/
+static const int MAX_READ_RETRIES = 10;
+static const int MAX_WRITE_RETRIES = 10;
+size_t safe_fread(void *buffer, size_t size, size_t count, FILE *stream);
+size_t safe_fwrite(void *buffer, size_t size, size_t count, FILE *stream);
+
 /*** Other Utility Functions ***/
 inline void *void_deref(void *v, int i, size_t size){
   return i ? (void *)((char *)v + (i*size)) : v;

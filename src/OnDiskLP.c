@@ -63,7 +63,7 @@
 #define h_uint uint64_t
 #define uint uint_fast32_t
 #define strlen_uint uint_least16_t
-#define l_uint uint_fast64_t
+#define l_uint uint_least64_t
 #define lu_fprint PRIuFAST64
 #define w_float float
 #define aq_int int16_t // size of "seen" counter in ArrayQueue
@@ -98,8 +98,6 @@
 
 static const int L_SIZE = sizeof(l_uint);
 static const int W_SIZE = sizeof(w_float);
-static const int MAX_READ_RETRIES = 10;
-static const int MAX_WRITE_RETRIES = 10;
 static const char CONSENSUS_CSRCOPY1[] = "tmpcsr1";
 static const char CONSENSUS_CLUSTER[] = "tmpclust";
 static const int BITS_FOR_WEIGHT = 10;
@@ -378,57 +376,6 @@ static void decompressEdgeValue(l_uint compressed, l_uint *v2, w_float *w){
   return;
 }
 
-/**************************/
-/* File Function Wrappers */
-/**************************/
-
-static size_t safe_fread(void *buffer, size_t size, size_t count, FILE *stream){
-  size_t found_values = fread(buffer, size, count, stream);
-  if(found_values != count){
-    // two scenarios:
-
-    // 1. read past the end of the file (throw error and return)
-    if(feof(stream))
-      error("%s", "Internal error: fread tried to read past end of file.\n");
-
-    // 2. some undefined reading error (retry a few times and then return)
-    for(int i=0; i<MAX_READ_RETRIES; i++){
-      // if we read a partial value, reset the counter back
-      if(found_values) fseek(stream, -1*((int)found_values), SEEK_CUR);
-
-      // try to read again
-      found_values = fread(buffer, size, count, stream);
-      if(found_values == count) return found_values;
-    }
-
-    // otherwise throw an error
-    error("Internal error: fread read %zu values (expected %zu).\n", found_values, count);
-  }
-  return found_values;
-}
-
-static size_t safe_fwrite(void *buffer, size_t size, size_t count, FILE *stream){
-  size_t written_values = fwrite(buffer, size, count, stream);
-  if(written_values != count){
-    // same scenarios as in safe_fread
-    if(feof(stream))
-      error("%s", "Internal error: fread tried to read past end of file.\n");
-
-    for(int i=0; i<MAX_WRITE_RETRIES; i++){
-      // if we read a partial value, reset the counter back
-      if(written_values) fseek(stream, -1*((int)written_values), SEEK_CUR);
-
-      // try to read again
-      written_values = fwrite(buffer, size, count, stream);
-      if(written_values == count) return count;
-    }
-
-    // otherwise throw an error
-    error("Internal error: fwrite wrote %zu values (expected %zu).\n", written_values, count);
-  }
-  return written_values;
-}
-
 static void safe_filepath_cat(const char *dir, const char *f, char *fname, size_t fnamesize){
   // fname should be preallocated
   char directory_separator;
@@ -654,7 +601,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
 
     tmpniter++;
     if(verbose){
-      Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
       Rprintf(")  \r");
@@ -715,7 +662,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
               cur_fsize = ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -741,7 +688,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
               cur_fsize = ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -832,7 +779,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
 
     tmpniter++;
     if(verbose){
-      Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                         tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
       Rprintf(")  \r");
@@ -893,7 +840,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
               cur_fsize = ftell(file1) + ftell(file2);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -912,7 +859,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
             cur_fsize = ftell(file1) + ftell(file2);
             if(cur_fsize > max_fsize) max_fsize = cur_fsize;
           }
-          Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
           report_filesize(max_fsize);
           Rprintf(")  \r");
@@ -934,7 +881,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   // cur_source will always be the file we just WROTE to here
 
   if(verbose){
-    Rprintf("\tIteration %llu of %llu (%6.01f%% complete, used ",
+    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%6.01f%% complete, used ",
                       tmpniter, nmax_iterations, cur_progress);
     report_filesize(max_fsize);
     Rprintf(")  \r");
