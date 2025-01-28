@@ -16,7 +16,8 @@ matrix with some extra S3 methods to make printing cleaner.
          NoPrediction=FALSE,
          ReturnDataFrame=TRUE,
          Verbose=interactive(),
-         CombinePVal=TRUE, ...)
+         CombinePVal=TRUE,
+         useDNA=FALSE,...)
 }
 \arguments{
   \item{object}{
@@ -80,6 +81,9 @@ matrix with some extra S3 methods to make printing cleaner.
   }
   \item{CombinePVal}{
     Logical indicating whether to combine scores and p-values or to return them as separate values. Defaults to \code{TRUE}.
+  }
+  \item{useDNA}{
+    Logical indicating whether to interpret sequences as DNA or AA (only used for Sequence Level methods, see Details).
   }
   \item{...}{
     Additional parameters for other predictors and consistency with generic.

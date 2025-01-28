@@ -1,3 +1,6 @@
+# SynExtend 1.19.5
+* fixes bug in GeneVector.EvoWeaver that could affect DNA-based analyses
+
 # SynExtend 1.19.4
 * fixes bug that prevented building on Windows
 * adds multiple clustering support for ExoLabel
