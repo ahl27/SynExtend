@@ -324,7 +324,8 @@ predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors
                                NoPrediction=FALSE,
                                ReturnDataFrame=TRUE,
                                Verbose=interactive(),
-                               CombinePVal=TRUE,...){
+                               CombinePVal=TRUE,
+                               useDNA=FALSE,...){
   ew <- object
   if(!is.null(Subset))
     Subset <- Standardize_Subset(Subset, ew)
@@ -375,7 +376,8 @@ predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors
                   NoPrediction=NoPrediction,
                   precalcSubset=subs,
                   precalcProfs=PAs,
-                  CombinePVal=CombinePVal,...)
+                  CombinePVal=CombinePVal,
+                  useDNA=useDNA,...)
 
     if (Verbose){
       cat('Done.\nTime difference of',

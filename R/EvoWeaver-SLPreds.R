@@ -136,12 +136,13 @@ SequenceInfo.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
 
 GeneVector.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
                             precalcSubset=NULL, extended=TRUE,
-                            DNAseqs=TRUE, centerObservations=FALSE,
+                            useDNA=FALSE, centerObservations=TRUE,
                             sqrtCorrelation=TRUE,
                             CombinePVal=TRUE, ...){
   #source('/Users/aidan/Nextcloud/RStudioSync/comps/NVDT/calcNVDT.R')
   useResidue <- attr(ew, 'useResidue')
   useMT <- attr(ew, 'useMT')
+  useColoc <- attr(ew, 'useColoc')
 
   stopifnot('EvoWeaver object must be initialized with dendrograms to run Residue methods'=
               useMT)
@@ -156,7 +157,11 @@ GeneVector.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
   uvals <- subs$uvals
   evalmap <- subs$evalmap
   l <- length(uvals)
-  alllabs <- lapply(uvals, \(x) labels(ew[[x]]))
+  if(useColoc){
+    alllabs <- lapply(uvals, \(x) gsub('([^_]*)_.*', '\\1', labels(ew[[x]])))
+  } else {
+    alllabs <- lapply(uvals, \(x) labels(ew[[x]]))
+  }
   n <- names(ew)
   if ( l == 1 ){
     v <- ifelse(CombinePVal, 1, 1+1i)
@@ -164,8 +169,8 @@ GeneVector.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
     rownames(mat) <- colnames(mat) <- n
     return(mat)
   }
-  outl <- ifelse(DNAseqs, 12L, 60L)
-  if(extended && DNAseqs)
+  outl <- ifelse(useDNA, 12L, 60L)
+  if(extended && useDNA)
     outl <- 92L
   vecs <- matrix(NA_real_, nrow=l, ncol=outl)
   if(Verbose){
@@ -188,14 +193,18 @@ GeneVector.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
     #seqs <- gsub('.', '', seqs, fixed=TRUE, useBytes=TRUE)
     outv <- numeric(outl)
     for (j in seq_along(seqs)){
+      removeGaps <- TRUE
       nvdtvec <- .Call("StringToNVDT",
                        charToRaw(seqs[j]),
-                       FALSE,    # RemoveGaps
+                       removeGaps,    # RemoveGaps
                        extended, # Use di/tri freqs
-                       DNAseqs,     # Use DNA base pairs
+                       useDNA,     # Use DNA base pairs
                        PACKAGE="SynExtend")
-      seqlen <- nchar(seqs[j])
-      if(DNAseqs){
+      if(removeGaps)
+        seqlen <- sum(strsplit(seqs[j], '')[[1]] != '-')
+      else
+        seqlen <- nchar(seqs[j])
+      if(useDNA){
         divval <- c(rep(seqlen, 8L), rep(1L, 4L))
         if(extended){
           #correcting 2-mers and 3-mers
@@ -207,13 +216,16 @@ GeneVector.EvoWeaver <- function(ew, Subset=NULL, Verbose=TRUE,
       nvdtvec <- nvdtvec / divval
       outv <- outv + nvdtvec
     }
-    if(centerObservations && !DNAseqs){
-      s <- seq_len(20L)
+    ## mean vector among all seqs, not the sum
+    outv <- outv / length(seqs)
+    if(centerObservations){
+      val_len <- ifelse(useDNA, 4L, 20L)
+      s <- seq_len(val_len)
       outv[s] <- (outv[s] - mean(outv[s])) / sd(outv[s])
       # Center should always be 0.5 for mean
-      s <- s + 20L
+      s <- s + val_len
       outv[s] <- (outv[s] - 0.5) / sd(outv[s])
-      s <- s + 20L
+      s <- s + val_len
       outv[s] <- (outv[s] - mean(outv[s])) / sd(outv[s])
     } else {
       outv <- outv / sqrt(sum(outv**2))

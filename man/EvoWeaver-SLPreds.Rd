@@ -25,7 +25,7 @@ All residue methods require a \code{EvoWeaver} object initialized
 with \code{dendrogram} objects and ancestral states. See \code{\link{EvoWeaver}} for more information on input data types.
 
 When \code{Method='Ensemble'} or \code{Method="SequenceLevel"}, EvoWeaver uses
-methods \code{SequenceInfo} and \code{GeneVector}.
+methods \code{SequenceInfo} and \code{GeneVector}. The argument \code{useDNA} switches between interpreting sequences as DNA or AA sequences.
 
 The \code{SequenceInfo} method looks at mutual information between sites in a multiple sequence alignment (MSA). This approach extends prior work in Martin et al. (2005). Each site from the first gene group is paired with the site from the second gene group that maximizes their mutual information.
 
