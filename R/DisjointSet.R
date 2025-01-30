@@ -48,7 +48,7 @@ DisjointSet <- function(Pairs,
     # run FindSets
     IntRes <- FindSets(p1 = FI1,
                        p2 = FI2,
-                       Verbose = TRUE)
+                       Verbose = Verbose)
     
     rm(list = c("FI1",
                 "FI2",
