@@ -75,7 +75,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 # this function will be deprecated soon,
 # please see the new SummarizePairs() function.
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v02.sqlite",
+                      "Endosymbionts_v03a.sqlite",
                       package = "SynExtend")
                       
 data("Endosymbionts_LinkedFeatures", package = "SynExtend")

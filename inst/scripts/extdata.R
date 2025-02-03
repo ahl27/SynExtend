@@ -11,10 +11,12 @@
 
 # data was regenerated again on 2024 04 25 for a set of new functions and
 # the deprecation of some old ones.
-source(file = "~/Packages/SynExtend/R/SummarizePairs.R", echo = FALSE)
-source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
-source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
-source(file = "~/Packages/SynExtend/R/PrepareSeqs.R", echo = FALSE)
+# source(file = "~/Packages/SynExtend/R/SummarizePairs.R", echo = FALSE)
+# source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
+# source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
+
+# data was regenerated again on 2025 01 31 for a new function
+source(file = "~/Packages/SynExtend/R/CompetePairs.R", echo = FALSE)
 
 suppressMessages(library(SynExtend))
 suppressMessages(library(RSQLite))
@@ -43,7 +45,12 @@ FtPPaths <- system(command = EntrezQuery,
 
 # keep the example data small...
 if (length(FtPPaths) > 4L) {
-  FtPPaths <- FtPPaths[1:4]
+  # setting the seed here is a little superfluous, as the data size will almost certainly
+  # change before this is run again, or before anyone comes back to run it themselves
+  set.seed(1986)
+  FtPPaths <- sample(FtPPaths,
+                     size = 4,
+                     replace = FALSE)
 }
 
 FNAs <- unname(sapply(FtPPaths,
@@ -68,7 +75,7 @@ GFFs <- unname(sapply(FtPPaths,
 # save off GFFs as external non-R data
 # save off `GeneCalls` as an object for examples
 
-# save off one GFF for `gffToDataFrameExample`
+# save off one GFF for `gffToDataFrame's example`
 CURLCOMMAND <- paste0("curl --output ",
                       paste0("~/Packages/SynExtend/inst/extdata/",
                              unlist(regmatches(x = GFFs[1],
@@ -83,21 +90,22 @@ system(command = CURLCOMMAND,
 Endosymbionts_GeneCalls <- vector(mode = "list",
                                     length = length(GFFs))
 
-VignetteDB <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v02.sqlite"
+VignetteDB01 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v03a.sqlite"
+VignetteDB02 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v03b.sqlite"
 
 for (m1 in seq_along(GFFs)) {
   Endosymbionts_GeneCalls[[m1]] <- gffToDataFrame(GFF = GFFs[m1],
                                                     Verbose = TRUE)
   Seqs2DB(seqs = FNAs[m1],
           type = "FASTA",
-          dbFile = VignetteDB,
+          dbFile = VignetteDB01,
           identifier = as.character(m1),
           verbose = TRUE)
 }
 
 names(Endosymbionts_GeneCalls) <- seq(length(Endosymbionts_GeneCalls))
 
-Endosymbionts_Synteny <- FindSynteny(dbFile = VignetteDB,
+Endosymbionts_Synteny <- FindSynteny(dbFile = VignetteDB01,
                                        verbose = TRUE)
 
 save(Endosymbionts_Synteny,
@@ -120,15 +128,20 @@ save(Endosymbionts_LinkedFeatures,
 
 ###### -- PrepareSeqs ---------------------------------------------------------
 
-Endosymbiont_Seqs <- PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
-                                 DataBase = VignetteDB,
-                                 Verbose = TRUE)
+system(command = paste("cp",
+                       VignetteDB01,
+                       VignetteDB02))
+
+PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
+            DataBase = VignetteDB02,
+            Verbose = TRUE)
 
 ###### -- PairSummaries -------------------------------------------------------
 
+CONN01 <- dbConnect(SQLite(), VignetteDB02)
+
 Endosymbionts_Pairs01 <- SummarizePairs(SynExtendObject = Endosymbionts_LinkedFeatures,
-                                        FeatureSeqs = Endosymbiont_Seqs,
-                                        DataBase = VignetteDB,
+                                        DataBase = CONN01,
                                         Verbose = TRUE)
 
 save(Endosymbionts_Pairs01,
@@ -138,7 +151,7 @@ save(Endosymbionts_Pairs01,
 ###### -- Clustering ----------------------------------------------------------
 
 Endosymbionts_Pairs02 <- ClusterByK(SynExtendObject = Endosymbionts_Pairs01,
-                                    ClusterScalar = 6,
+                                    ClusterScalar = 3,
                                     ShowPlot = TRUE,
                                     Verbose = TRUE)
 
@@ -150,8 +163,7 @@ save(Endosymbionts_Pairs02,
 
 Endosymbionts_Pairs03 <- ExpandDiagonal(SynExtendObject = Endosymbionts_Pairs02[Endosymbionts_Pairs02$ClusterID %in% as.integer(names(which(attr(x = Endosymbionts_Pairs02,
                                                                                                                                                  which = "Retain")))), ],
-                                        FeatureSeqs = Endosymbiont_Seqs,
-                                        DataBase = VignetteDB,
+                                        DataBase = CONN01,
                                         Verbose = TRUE)
 save(Endosymbionts_Pairs03,
      file = "~/Packages/SynExtend/data/Endosymbionts_Pairs03.RData",
@@ -170,11 +182,23 @@ save(Endosymbionts_Sets,
 # no functions in the pipeline beyond this function
 # no need to save off this for examples
 # Endosymbionts_Gene_Communities <- ExtractBy(x = Endosymbionts_Pairs03,
-#                                             y = VignetteDB,
+#                                             y = VignetteDB02,
 #                                             z = Endosymbionts_Sets,
 #                                             Verbose = TRUE)
 # 
 # save(Endosymbionts_Gene_Communities,
 #      file = "~/Packages/SynExtend/data/Endosymbionts_Gene_Communities.RData",
 #      compress = "xz")
+
+###### -- CompetePairs --------------------------------------------------------
+
+# no functions in the pipeline beyond this function
+# so we don't need to save this for now...
+# Endosymbionts_Pairs04 <- CompetePairs(SynExtendObject = Endosymbionts_Pairs01,
+#                                       Verbose = TRUE)
+# save(Endosymbionts_Pairs04,
+#      file = "~/Packages/SynExtend/data/Endosymbionts_Pairs04.RData",
+#      compress = "xz")
+
+
 

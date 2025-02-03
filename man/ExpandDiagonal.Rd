@@ -58,25 +58,13 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \examples{
 library(RSQLite)
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v02.sqlite",
+                      "Endosymbionts_v03b.sqlite",
                       package = "SynExtend")
-tmp <- tempfile()
-system(command = paste("cp",
-                       DBPATH,
-                       tmp))
-DBCONN <- dbConnect(SQLite(), tmp)
-                      
-data("Endosymbionts_LinkedFeatures", package = "SynExtend")
-PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
-            DataBase01 = DBCONN,
-            Verbose = TRUE)
-SummarizedPairs <- SummarizePairs(SynExtendObject = Endosymbionts_LinkedFeatures,
-                                  DataBase01 = DBCONN,
-                                  Verbose = TRUE)
-ExpandedPairs <- ExpandDiagonal(SynExtendObject = SummarizedPairs,
+DBCONN <- dbConnect(SQLite(), DBPATH)
+data("Endosymbionts_Pairs01", package = "SynExtend")
+
+ExpandedPairs <- ExpandDiagonal(SynExtendObject = Endosymbionts_Pairs01,
                                 DataBase01 = DBCONN,
                                 Verbose = TRUE)
 dbDisconnect(DBCONN)
-unlink(tmp)
-
 }

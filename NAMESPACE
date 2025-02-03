@@ -45,6 +45,7 @@ export(PrepareSeqs)
 export(SummarizePairs)
 export(ClusterByK)
 export(ExpandDiagonal)
+export(CompetePairs)
 
 S3method(subset, 'dendrogram')
 
