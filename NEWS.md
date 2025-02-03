@@ -1,3 +1,6 @@
+# SynExtend 1.19.6
+* fixes multiple bugs in EstimRearrScen
+
 # SynExtend 1.19.5
 * fixes bug in GeneVector.EvoWeaver that could affect DNA-based analyses
 
