@@ -188,7 +188,7 @@ ClusterByK <- function(SynExtendObject,
   attr(res,
        "centers") <- kmc[[EvalClust]]$centers
   attr(res,
-       "Retain") <- res1 >= UserConfVal
+       "RetainByCluster") <- res1 >= UserConfVal
   attr(res,
        "GeneCalls") <- attr(SynExtendObject,
                             "GeneCalls")
