@@ -703,7 +703,7 @@ EstimRearrScen <- function(SyntenyObject,
 
       }
         # These aren't fully fleshed out and will probably be worse to include at this point
-        rearrangements$Gen1Dup <- rearrangements$Gen2Dup <- rearrangements$Translocations <- rearrangements$InsDel <- NULL
+        ## rearrangements$Gen1Dup <- rearrangements$Gen2Dup <- rearrangements$Translocations <- rearrangements$InsDel <- NULL
         if (is.null(rearrangements$Scenario)) rearrangements$Scenario <- 'No events'
         if (is.null(rearrangements$Key)) rearrangements$Key <- NA
       rearr_mat[[gen1, gen2]] <- rearrangements
