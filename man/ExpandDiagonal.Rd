@@ -58,7 +58,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \examples{
 library(RSQLite)
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v03b.sqlite",
+                      "Endosymbionts_v04b.sqlite",
                       package = "SynExtend")
 DBCONN <- dbConnect(SQLite(), DBPATH)
 data("Endosymbionts_Pairs01", package = "SynExtend")

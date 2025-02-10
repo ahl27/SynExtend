@@ -99,6 +99,10 @@ ExpandDiagonal <- function(SynExtendObject,
       UserConfidence <- UserConfidence
     }
   }
+  AA_matrix <- attr(x = SynExtendObject,
+                    which = "AA_matrix")
+  NT_matrix <- attr(x = SynExtendObject,
+                    which = "NT_matrix")
   Criteria <- names(UserConfidence)
   Floor <- unname(UserConfidence)
   KmerSize <- attr(x = SynExtendObject,
@@ -239,6 +243,12 @@ ExpandDiagonal <- function(SynExtendObject,
                        identifier = as.character(w1),
                        verbose = FALSE,
                        nameBy = "description")
+      aa_background <- alphabetFrequency(x = out2)
+      aa_background <- aa_background[, colnames(AA_matrix)]
+      aa_background <- aa_background / rowSums(aa_background)
+      nt_background <- alphabetFrequency(x = out1)
+      nt_background <- nt_background[, colnames(NT_matrix)]
+      nt_background <- nt_background / rowSums(nt_background)
       
       # DBQUERY <- paste("select length, mod, code, cds from NTs where identifier is",
       #                  w1)
@@ -255,7 +265,13 @@ ExpandDiagonal <- function(SynExtendObject,
                                                             table = GCIDs)]]$Coding,
                             "CodingVal2" = width(out1) %% 3L == 0L,
                             "CDSCount" = lengths(GeneCalls[[match(x = w1,
-                                                                  table = GCIDs)]]$Range))
+                                                                  table = GCIDs)]]$Range),
+                            "AA_background" = aa_background,
+                            "NT_background" = nt_background,
+                            "Register" = match(x = seq(length(out1)),
+                                               table = which((width(out1) %% 3L == 0L) &
+                                                               GeneCalls[[match(x = w1,
+                                                                                table = GCIDs)]]$Coding)))
     }
     
     if (prev_w2 != w2) {
@@ -269,6 +285,12 @@ ExpandDiagonal <- function(SynExtendObject,
                        identifier = as.character(w2),
                        verbose = FALSE,
                        nameBy = "description")
+      aa_background <- alphabetFrequency(x = out2)
+      aa_background <- aa_background[, colnames(AA_matrix)]
+      aa_background <- aa_background / rowSums(aa_background)
+      nt_background <- alphabetFrequency(x = out1)
+      nt_background <- nt_background[, colnames(NT_matrix)]
+      nt_background <- nt_background / rowSums(nt_background)
       # DBQUERY <- paste("select length, mod, code, cds from NTs where identifier is",
       #                  w2)
       # out3 <- dbGetQuery(conn = dbConn,
@@ -284,7 +306,13 @@ ExpandDiagonal <- function(SynExtendObject,
                                                             table = GCIDs)]]$Coding,
                             "CodingVal2" = width(out1) %% 3L == 0L,
                             "CDSCount" = lengths(GeneCalls[[match(x = w2,
-                                                                  table = GCIDs)]]$Range))
+                                                                  table = GCIDs)]]$Range),
+                            "AA_background" = aa_background,
+                            "NT_background" = nt_background,
+                            "Register" = match(x = seq(length(out1)),
+                                               table = which((width(out1) %% 3L == 0L) &
+                                                               GeneCalls[[match(x = w2,
+                                                                                table = GCIDs)]]$Coding)))
     }
     
     
@@ -585,8 +613,8 @@ ExpandDiagonal <- function(SynExtendObject,
         
         p1placeholder <- p2placeholder <- p1FeatureLength <- p2FeatureLength <- rep(NA_integer_,
                                                                                     times = VSize)
-        PIDVector <- SCOREVector <- NucDist <- rep(NA_real_,
-                                                   times = VSize)
+        PIDVector <- SCOREVector <- NucDist <- backgrounds <- rep(NA_real_,
+                                                                  times = VSize)
         AType <- rep(NA_character_,
                      times = VSize)
         
@@ -639,6 +667,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                                               HEC_MI1 = MAT1,
                                                               HEC_MI2 = MAT2),
                                       structureMatrix = structureMatrix)
+              background_score <- sum(CurrentW1Seqs$AA_background[CurrentW1Seqs$Register[f1], ] * t(CurrentW2Seqs$AA_backgrounds[CurrentW2Seqs$Register[f2], ] * AA_matrix))
               
               CType <- "AA"
             } else {
@@ -651,6 +680,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                         verbose = FALSE)[1L, 2L]
               SCORE <- ScoreAlignment(myXStringSet = ali,
                                       substitutionMatrix = substitutionMatrix)
+              background_score <- sum(CurrentW1Seqs$NT_background[f1, ] * t(CurrentW2Seqs$NT_backgrounds[f2, ] * NT_matrix))
               CType <- "NT"
             } # end if else statement for coding / non
             CurrentDist <- sqrt(sum((nuc1[f1, ] - nuc2[f2, ])^2)) / ((sum(nuc1[f1, ]) + sum(nuc2[f2, ])) / 2)
@@ -676,6 +706,7 @@ ExpandDiagonal <- function(SynExtendObject,
               SCOREVector[Count] <- SCORE
               AType[Count] <- CType
               NucDist[Count] <- CurrentDist
+              backgrounds[Count] <- background_score
               
               # update f1 and f2
               if (advanceID == 0L) {
@@ -727,6 +758,9 @@ ExpandDiagonal <- function(SynExtendObject,
                 NucDist <- c(NucDist,
                              rep(NA_real_,
                                  times = VSize))
+                backgrounds <- c(backgrounds,
+                                 rep(NA_real_,
+                                     times = VSize))
               } # end count size if statement
               
             } # end PID check
@@ -754,6 +788,7 @@ ExpandDiagonal <- function(SynExtendObject,
           SCOREVector <- SCOREVector[seq_len(L2)]
           AType <- AType[seq_len(L2)]
           NucDist <- NucDist[seq_len(L2)]
+          backgrounds <- backgrounds[seq_len(L2)]
           
           Res[[m1]][[m2]] <- data.frame("p1" = paste(rep(w1,
                                                          times = L2),
@@ -787,6 +822,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                                           times = L2),
                                         "ClusterID" = rep(NewClusterID,
                                                           times = L2),
+                                        "Delta_Background" = SCOREVector - backgrounds,
                                         stringsAsFactors = FALSE)
           
         } else {
@@ -839,6 +875,12 @@ ExpandDiagonal <- function(SynExtendObject,
                             },
                             x = dr6$f1[code_select],
                             y = dr6$f2[code_select])
+          aa_backgrounds <- mapply(USE.NAMES = FALSE,
+                                   FUN = function(x, y) {# coding
+                                     sum(CurrentW1Seqs$AA_backgrounds[x, ] * t(CurrentW2Seqs$NT_backgrounds[y, ] * AA_matrix))
+                                   },
+                                   x = dr6$f1[code_select],
+                                   y = dr6$f2[code_select])
           # build out a df
           L2 <- nrow(aa_res)
           aa_int <- data.frame("p1" = names(CurrentW1Seqs$AA[aa_pairs$Pattern]),
@@ -864,6 +906,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                                  times = L2),
                                "ClusterID" = rep(NewClusterID,
                                                  times = L2),
+                               "Delta_Background" = aa_score - aa_backgrounds,
                                stringsAsFactors = FALSE)
         } else {
           # build a df with no rows
@@ -882,6 +925,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                "Alignment" = character(0L),
                                "Block_UID" = integer(0L),
                                "ClusterID" = integer(0L),
+                               "Delta_Background" = numeric(0L),
                                stringsAsFactors = FALSE)
         }
         
@@ -917,6 +961,14 @@ ExpandDiagonal <- function(SynExtendObject,
                             },
                             x = nt_res$Pattern,
                             y = nt_res$Subject)
+          
+          nt_backgrounds <- mapply(USE.NAMES = FALSE,
+                                   FUN = function(x, y) {
+                                     # non-coding
+                                     sum(CurrentW1Seqs$NT_backgrounds[x, ] * t(CurrentW2Seqs$NT_backgrounds[y, ] * NT_matrix))
+                                   },
+                                   x = nt_res$Pattern,
+                                   y = nt_res$Subject)
           L2 <- nrow(nt_res)
           # build out a df
           # return(list("p1" = names(CurrentW1Seqs$DNA[nt_pairs$Pattern]),
@@ -965,6 +1017,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                                  times = L2),
                                "ClusterID" = rep(NewClusterID,
                                                  times = L2),
+                               "Delta_Background" = nt_score - nt_backgrounds,
                                stringsAsFactors = FALSE)
         } else {
           # build out a df with no rows
@@ -983,6 +1036,7 @@ ExpandDiagonal <- function(SynExtendObject,
                                "Alignment" = character(0L),
                                "Block_UID" = integer(0L),
                                "ClusterID" = integer(0L),
+                               "Delta_Background" = numeric(0L),
                                stringsAsFactors = FALSE)
         }
         
@@ -1029,6 +1083,7 @@ ExpandDiagonal <- function(SynExtendObject,
                       "Alignment" = character(0L),
                       "Block_UID" = integer(0L),
                       "ClusterID" = integer(0L),
+                      "Delta_Background" = numeric(0L),
                       stringsAsFactors = FALSE)
   } else {
     # if Res is not NULL
@@ -1210,6 +1265,12 @@ ExpandDiagonal <- function(SynExtendObject,
     attr(x = Res,
          which = "KVal") <- attr(x = SynExtendObject,
                                  which = "KVal")
+    attr(x = Res,
+         which = "AA_matrix") <- attr(x = SynExtendObject,
+                                      which = "AA_matrix")
+    attr(x = Res,
+         which = "NT_matrix") <- attr(x = SynExtendObject,
+                                      which = "NT_matrix")
     if (Verbose) {
       TimeEnd <- Sys.time()
       print(TimeEnd - TimeStart)

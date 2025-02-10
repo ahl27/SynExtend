@@ -11,7 +11,8 @@ ClusterByK <- function(SynExtendObject,
                                      "TotalMatch",
                                      "Consensus",
                                      "PID",
-                                     "Score"),
+                                     "Score",
+                                     "Delta_Background"),
                        ColNorm = "Score",
                        ShowPlot = FALSE,
                        Verbose = FALSE) {
@@ -200,6 +201,12 @@ ClusterByK <- function(SynExtendObject,
   attr(x = res,
        which = "KVal") <- attr(x = SynExtendObject,
                                which = "KVal")
+  attr(x = res,
+       which = "AA_matrix") <- attr(x = SynExtendObject,
+                                    which = "AA_matrix")
+  attr(x = res,
+       which = "NT_matrix") <- attr(x = SynExtendObject,
+                                    which = "NT_matrix")
   class(res) <- c("data.frame",
                   "PairSummaries")
   
@@ -230,7 +237,11 @@ ClusterByK <- function(SynExtendObject,
     hist(res$PID,
          breaks = seq(from = 0,
                       to = 1,
-                      by = 0.01))
+                      by = 0.01),
+         xaxs = "i",
+         yaxs = "i",
+         main = "Histogram",
+         xlab = "PID")
     plot(x = 0,
          y = 0,
          type = "n",

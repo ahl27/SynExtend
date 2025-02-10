@@ -45,7 +45,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 }
 \examples{
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v03a.sqlite",
+                      "Endosymbionts_v04a.sqlite",
                       package = "SynExtend")
                       
 data("Endosymbionts_LinkedFeatures", package = "SynExtend")

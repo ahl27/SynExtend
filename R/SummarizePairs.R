@@ -2,7 +2,7 @@
 # author: nicholas cooley
 # maintainer: nicholas cooley
 # contact: npc19@pitt.edu
-# given a linked pairs object, and a FeatureSeqs object return a pairsummaries
+# given a linked pairs object, and a database connection return a pairsummaries
 # object
 # this function will always align, unlike PairSummaries
 # TODO:
@@ -10,7 +10,6 @@
 # ShowPlot
 # Processors -- partially implemented, at least for AlignPairs
 # ellipses
-# SearchIndex subsetting to only search non-occupied spaces -- erik thinks we can avoid this
 
 SummarizePairs <- function(SynExtendObject,
                            DataBase01,
@@ -24,7 +23,7 @@ SummarizePairs <- function(SynExtendObject,
                            ShowPlot = FALSE,
                            Processors = 1,
                            Storage = 2,
-                           IndexParams = list("K" = 6),
+                           IndexParams = list("K" = 5),
                            SearchParams = list("perPatternLimit" = 1),
                            ...) {
   
@@ -134,8 +133,11 @@ SummarizePairs <- function(SynExtendObject,
   ObjectIDs <- rownames(SynExtendObject)
   # when we subset a LinkedPairsObject it doesn't smartly handle the genecalls yet...
   if (!all(ObjectIDs %in% GeneCallIDs)) {
-    stop("Function expects all IDs in the SynExtendObject to supplied GeneCalls.")
+    stop("Function expects all IDs in the SynExtendObject to have supplied GeneCalls.")
   }
+  
+  AA_matrix <- DECIPHER:::.getSubMatrix("PFASUM50")
+  NT_matrix <- DECIPHER:::.nucleotideSubstitutionMatrix(c(2, -1), 1)
   
   feature_match <- match(x = ObjectIDs,
                          table = GeneCallIDs)
@@ -227,39 +229,52 @@ SummarizePairs <- function(SynExtendObject,
         # the pool position is empty, pull from the DB
         # and generate the AAStructures
         DataPool[[feature_match[m1]]]$DNA <- SearchDB(dbFile = dbConn,
-                                       tblName = "NTs",
-                                       identifier = ObjectIDs[m1],
-                                       verbose = FALSE,
-                                       nameBy = "description",
-                                       type = "DNAStringSet")
+                                                      tblName = "NTs",
+                                                      identifier = ObjectIDs[m1],
+                                                      verbose = FALSE,
+                                                      nameBy = "description",
+                                                      type = "DNAStringSet")
         DataPool[[feature_match[m1]]]$AA <- SearchDB(dbFile = dbConn,
-                                      tblName = "AAs",
-                                      identifier = ObjectIDs[m1],
-                                      verbose = FALSE,
-                                      nameBy = "description",
-                                      type = "AAStringSet")
+                                                     tblName = "AAs",
+                                                     identifier = ObjectIDs[m1],
+                                                     verbose = FALSE,
+                                                     nameBy = "description",
+                                                     type = "AAStringSet")
+        # # return(list("a" = DataPool[[feature_match[m1]]]$DNA,
+        # #             "b" = DataPool[[feature_match[m1]]]$AA))
+        # print("a")
         DataPool[[feature_match[m1]]]$len <- width(DataPool[[feature_match[m1]]]$DNA)
         DataPool[[feature_match[m1]]]$mod <- DataPool[[feature_match[m1]]]$len %% 3L == 0
         DataPool[[feature_match[m1]]]$code <- GeneCalls[[feature_match[m1]]]$Coding
         DataPool[[feature_match[m1]]]$cds <- lengths(GeneCalls[[feature_match[m1]]]$Range)
         
         DataPool[[feature_match[m1]]]$struct <- PredictHEC(myAAStringSet = DataPool[[feature_match[m1]]]$AA,
-                                            type = "probabilities",
-                                            HEC_MI1 = MAT1,
-                                            HEC_MI2 = MAT2)
+                                                           type = "probabilities",
+                                                           HEC_MI1 = MAT1,
+                                                           HEC_MI2 = MAT2)
+        DataPool[[feature_match[m1]]]$aa_backgrounds <- alphabetFrequency(x = DataPool[[feature_match[m1]]]$AA)
+        DataPool[[feature_match[m1]]]$aa_backgrounds <- DataPool[[feature_match[m1]]]$aa_backgrounds[, colnames(AA_matrix)]
+        DataPool[[feature_match[m1]]]$aa_backgrounds <- DataPool[[feature_match[m1]]]$aa_backgrounds / rowSums(DataPool[[feature_match[m1]]]$aa_backgrounds)
+        DataPool[[feature_match[m1]]]$dna_backgrounds <- alphabetFrequency(x = DataPool[[feature_match[m1]]]$DNA)
+        DataPool[[feature_match[m1]]]$dna_backgrounds <- DataPool[[feature_match[m1]]]$dna_backgrounds[, colnames(NT_matrix)]
+        DataPool[[feature_match[m1]]]$dna_backgrounds <- DataPool[[feature_match[m1]]]$dna_backgrounds / rowSums(DataPool[[feature_match[m1]]]$dna_backgrounds)
+        DataPool[[feature_match[m1]]]$aa_register <- match(table = which(DataPool[[feature_match[m1]]]$mod &
+                                                                           DataPool[[feature_match[m1]]]$code),
+                                                           x = seq(length(DataPool[[feature_match[m1]]]$DNA)))
+        
         if (IncludeIndexSearch & !IgnoreDefaultStringSet) {
           # return(list(DataPool[[m1]]$AA,
           #             DataPool[[m1]]$mod,
           #             DataPool[[m1]]$code))
           DataPool[[feature_match[m1]]]$index <- do.call(what = "IndexSeqs",
-                                          args = c(list("subject" = DataPool[[feature_match[m1]]]$AA[DataPool[[feature_match[m1]]]$mod[DataPool[[feature_match[m1]]]$code]],
-                                                        "verbose" = FALSE),
-                                                   IndexParams))
+                                                         args = c(list("subject" = DataPool[[feature_match[m1]]]$AA[DataPool[[feature_match[m1]]]$mod[DataPool[[feature_match[m1]]]$code]],
+                                                                       "verbose" = FALSE),
+                                                                  IndexParams))
         } else if (IncludeIndexSearch & IgnoreDefaultStringSet) {
           DataPool[[feature_match[m1]]]$index <- do.call(what = "IndexSeqs",
-                                          args = c(list("subject" = DataPool[[feature_match[m1]]]$DNA,
-                                                        "verbose" = FALSE),
-                                                   IndexParams))
+                                                         args = c(list("subject" = DataPool[[feature_match[m1]]]$DNA,
+                                                                       "verbose" = FALSE),
+                                                                  IndexParams))
         }
         
       } else {
@@ -271,36 +286,47 @@ SummarizePairs <- function(SynExtendObject,
         # the pool position is empty, pull from DB
         # and generate the AAStructures
         DataPool[[feature_match[m2]]]$DNA <- SearchDB(dbFile = dbConn,
-                                       tblName = "NTs",
-                                       identifier = ObjectIDs[m2],
-                                       verbose = FALSE,
-                                       nameBy = "description",
-                                       type = "DNAStringSet")
+                                                      tblName = "NTs",
+                                                      identifier = ObjectIDs[m2],
+                                                      verbose = FALSE,
+                                                      nameBy = "description",
+                                                      type = "DNAStringSet")
         DataPool[[feature_match[m2]]]$AA <- SearchDB(dbFile = dbConn,
-                                      tblName = "AAs",
-                                      identifier = ObjectIDs[m2],
-                                      verbose = FALSE,
-                                      nameBy = "description",
-                                      type = "AAStringSet")
+                                                     tblName = "AAs",
+                                                     identifier = ObjectIDs[m2],
+                                                     verbose = FALSE,
+                                                     nameBy = "description",
+                                                     type = "AAStringSet")
         DataPool[[feature_match[m2]]]$len <- width(DataPool[[feature_match[m2]]]$DNA)
         DataPool[[feature_match[m2]]]$mod <- DataPool[[feature_match[m2]]]$len %% 3L == 0
         DataPool[[feature_match[m2]]]$code <- GeneCalls[[feature_match[m2]]]$Coding
         DataPool[[feature_match[m2]]]$cds <- lengths(GeneCalls[[feature_match[m2]]]$Range)
         
         DataPool[[feature_match[m2]]]$struct <- PredictHEC(myAAStringSet = DataPool[[feature_match[m2]]]$AA,
-                                            type = "probabilities",
-                                            HEC_MI1 = MAT1,
-                                            HEC_MI2 = MAT2)
+                                                           type = "probabilities",
+                                                           HEC_MI1 = MAT1,
+                                                           HEC_MI2 = MAT2)
+        DataPool[[feature_match[m2]]]$aa_backgrounds <- alphabetFrequency(x = DataPool[[feature_match[m2]]]$AA)
+        DataPool[[feature_match[m2]]]$dna_backgrounds <- alphabetFrequency(x = DataPool[[feature_match[m2]]]$DNA)
+        DataPool[[feature_match[m2]]]$aa_backgrounds <- DataPool[[feature_match[m2]]]$aa_backgrounds[, colnames(AA_matrix)]
+        DataPool[[feature_match[m2]]]$aa_backgrounds <- DataPool[[feature_match[m2]]]$aa_backgrounds / rowSums(DataPool[[feature_match[m2]]]$aa_backgrounds)
+        DataPool[[feature_match[m2]]]$dna_backgrounds <- alphabetFrequency(x = DataPool[[feature_match[m2]]]$DNA)
+        DataPool[[feature_match[m2]]]$dna_backgrounds <- DataPool[[feature_match[m2]]]$dna_backgrounds[, colnames(NT_matrix)]
+        DataPool[[feature_match[m2]]]$dna_backgrounds <- DataPool[[feature_match[m2]]]$dna_backgrounds / rowSums(DataPool[[feature_match[m2]]]$dna_backgrounds)
+        DataPool[[feature_match[m2]]]$aa_register <- match(table = which(DataPool[[feature_match[m2]]]$mod &
+                                                                           DataPool[[feature_match[m2]]]$code),
+                                                           x = seq(length(DataPool[[feature_match[m2]]]$DNA)))
+        
         if (IncludeIndexSearch & !IgnoreDefaultStringSet) {
           DataPool[[feature_match[m2]]]$index <- do.call(what = "IndexSeqs",
-                                          args = c(list("subject" = DataPool[[feature_match[m2]]]$AA[DataPool[[feature_match[m2]]]$mod[DataPool[[feature_match[m2]]]$code]],
-                                                        "verbose" = FALSE),
-                                                   IndexParams))
+                                                         args = c(list("subject" = DataPool[[feature_match[m2]]]$AA[DataPool[[feature_match[m2]]]$mod[DataPool[[feature_match[m2]]]$code]],
+                                                                       "verbose" = FALSE),
+                                                                  IndexParams))
         } else if (IncludeIndexSearch & IgnoreDefaultStringSet) {
           DataPool[[feature_match[m2]]]$index <- do.call(what = "IndexSeqs",
-                                          args = c(list("subject" = DataPool[[feature_match[m2]]]$DNA,
-                                                        "verbose" = FALSE),
-                                                   IndexParams))
+                                                         args = c(list("subject" = DataPool[[feature_match[m2]]]$DNA,
+                                                                       "verbose" = FALSE),
+                                                                  IndexParams))
         }
       } else {
         # the pool position is not empty, assume that it's populated with all the information
@@ -316,6 +342,9 @@ SummarizePairs <- function(SynExtendObject,
         QCDSCount <- DataPool[[feature_match[m1]]]$cds
         QueryStruct <- DataPool[[feature_match[m1]]]$struct
         QueryIndex <- DataPool[[feature_match[m1]]]$index
+        Query_Background_AA <- DataPool[[feature_match[m1]]]$aa_backgrounds
+        Query_Background_NT <- DataPool[[feature_match[m1]]]$dna_backgrounds
+        Q_AA_Register <- DataPool[[feature_match[m1]]]$aa_register
       } else {
         # do something else?
       }
@@ -328,6 +357,9 @@ SummarizePairs <- function(SynExtendObject,
       SCDSCount <- DataPool[[feature_match[m2]]]$cds
       SubjectStruct <- DataPool[[feature_match[m2]]]$struct
       SubjectIndex <- DataPool[[feature_match[m2]]]$index
+      Subject_Background_AA <- DataPool[[feature_match[m2]]]$aa_backgrounds
+      Subject_Background_NT <- DataPool[[feature_match[m2]]]$dna_backgrounds
+      S_AA_Register <- DataPool[[feature_match[m2]]]$aa_register
       
       if (IncludeIndexSearch) {
         # step 1: build indexes into the data pool if they don't exist already
@@ -714,6 +746,63 @@ SummarizePairs <- function(SynExtendObject,
         UniqueMatches <- SynExtendObject[[m1, m2]][, "TotalKmerHits"]
         # total matches at all
         TotalMatch <- SynExtendObject[[m1, m2]][, "ExactOverlap"]
+        
+        # # aas
+        # z <- DECIPHER:::.getSubMatrix("PFASUM50")
+        # # get alphabet frequencies
+        # val1 <- alphabetFrequency(translate(sets02[[1]][1:2]))
+        # # subset to colnames of the substitution matrix
+        # val1 <- val1[, colnames(z)]
+        # val1 <- val1 / rowSums(val1)
+        # # with outer:
+        # val2 <- sum(outer(val1[1, ], val1[2, ]) * z)
+        # # using transpose
+        # val2 <- sum(val1[1, ] * t(val1[2, ] * z))
+        
+        # need both the modulo
+        # and the and the coding value
+        # the position, and the register position
+        pos1 <- SynExtendObject[[m1, m2]][, 1L]
+        pos2 <- SynExtendObject[[m1, m2]][, 2L]
+        mod1 <- QMod[SynExtendObject[[m1, m2]][, 1L]]
+        mod2 <- SMod[SynExtendObject[[m1, m2]][, 2L]]
+        code1 <- QCode[SynExtendObject[[m1, m2]][, 1L]]
+        code2 <- SCode[SynExtendObject[[m1, m2]][, 2L]]
+        pos3 <- Q_AA_Register[SynExtendObject[[m1, m2]][, 1L]]
+        pos4 <- S_AA_Register[SynExtendObject[[m1, m2]][, 2L]]
+        
+        # return(list("p1" = pos1,
+        #             "p2" = pos2,
+        #             "p3" = pos3,
+        #             "p4" = pos4,
+        #             "code1" = code1,
+        #             "code2" = code2,
+        #             "mod1" = mod1,
+        #             "mod2" = mod2,
+        #             "aa1" = Query_Background_AA,
+        #             "aa2" = Subject_Background_AA,
+        #             "nt1" = Query_Background_NT,
+        #             "nt2" = Subject_Background_NT,
+        #             "aa_mat" = AA_matrix,
+        #             "nt_mat" = NT_matrix,
+        #             "reg1" = Q_AA_Register,
+        #             "reg2" = S_AA_Register))
+        
+        diff3 <- mapply(USE.NAMES = FALSE,
+                        FUN = function(v, w, x, y, z) {
+                          if (z) {
+                            # coding
+                            sum(Query_Background_AA[x, ] * t(Subject_Background_AA[y, ] * AA_matrix))
+                          } else {
+                            # non-coding
+                            sum(Query_Background_NT[v, ] * t(Subject_Background_NT[w, ] * NT_matrix))
+                          }
+                        },
+                        v = pos1,
+                        w = pos2,
+                        x = pos3,
+                        y = pos4,
+                        z = code1 & mod1 & code2 & mod2)
         
         # block size determination
         if (nrow(SynExtendObject[[m1, m2]]) > 1) {
@@ -1311,7 +1400,8 @@ SummarizePairs <- function(SynExtendObject,
                                   "Alignment" = ifelse(test = AASelect,
                                                        yes = "AA",
                                                        no = "NT"),
-                                  "Block_UID" = BlockID_Map)
+                                  "Block_UID" = BlockID_Map,
+                                  "Delta_Background" = vec2 - diff3)
       } else {
         # link table is not populated
         PH[[Count]] <- data.frame("p1" = character(),
@@ -1327,7 +1417,8 @@ SummarizePairs <- function(SynExtendObject,
                                   "PID" = numeric(),
                                   "Score" = numeric(),
                                   "Alignment" = character(),
-                                  "Block_UID" = integer())
+                                  "Block_UID" = integer(),
+                                  "Delta_Background" = numeric())
       }
       # Count and PBCount are unlinked,
       # iterate through both separately and correctly
@@ -1378,6 +1469,10 @@ SummarizePairs <- function(SynExtendObject,
        which = "AlignmentFunction") <- AlignmentFun
   attr(x = res,
        which = "KVal") <- KmerSize
+  attr(x = res,
+       which = "AA_matrix") <- AA_matrix
+  attr(x = res,
+       which = "NT_matrix") <- NT_matrix
   # attr(x = res,
   #      which = "NT_Anchors") <- NT_Anchors
   

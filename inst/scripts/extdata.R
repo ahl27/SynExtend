@@ -15,11 +15,14 @@
 # source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
 # source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
 
-# data was regenerated again on 2025 01 31 for a new function
-source(file = "~/Packages/SynExtend/R/CompetePairs.R", echo = FALSE)
-
 suppressMessages(library(SynExtend))
 suppressMessages(library(RSQLite))
+
+# data was regenerated again on 2025 02 08 for a new function
+source(file = "~/Packages/SynExtend/R/CompetePairs.R", echo = FALSE)
+source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
+source(file = "~/Packages/SynExtend/R/SummarizePairs.R", echo = FALSE)
+source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
 
 TODAYSDATE <- paste0(unlist(strsplit(x = as.character(Sys.time()),
                                      split = "-| ")[[1]][1:3]),
@@ -90,8 +93,8 @@ system(command = CURLCOMMAND,
 Endosymbionts_GeneCalls <- vector(mode = "list",
                                     length = length(GFFs))
 
-VignetteDB01 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v03a.sqlite"
-VignetteDB02 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v03b.sqlite"
+VignetteDB01 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v04a.sqlite"
+VignetteDB02 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v04b.sqlite"
 
 for (m1 in seq_along(GFFs)) {
   Endosymbionts_GeneCalls[[m1]] <- gffToDataFrame(GFF = GFFs[m1],

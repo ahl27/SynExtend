@@ -19,7 +19,7 @@ SummarizePairs(SynExtendObject,
                ShowPlot = FALSE,
                Processors = 1,
                Storage = 2,
-               IndexParams = list("K" = 6),
+               IndexParams = list("K" = 5),
                SearchParams = list("perPatternLimit" = 1),
                ...)
 }
@@ -86,7 +86,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \examples{
 library(RSQLite)
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v03b.sqlite",
+                      "Endosymbionts_v04b.sqlite",
                       package = "SynExtend")
 DBCONN <- dbConnect(SQLite(), DBPATH)
 data("Endosymbionts_LinkedFeatures", package = "SynExtend")
