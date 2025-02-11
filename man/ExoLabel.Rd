@@ -88,6 +88,8 @@ Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FA
 
 \section{Algorithm Convergence}{
 One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated.
+
+Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating the result. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically depending on how many nodes update on each cycle. For more information, see Leung et al. (2009) linked in the References section.
 }
 
 \section{Multiple Clusterings}{
@@ -113,7 +115,9 @@ If \code{return_table=FALSE}, \code{results} is a character vector of length 1. 
 }
 
 \references{
-Traag, V.A., Subelj, L. Large network community detection by fast label propagation. \emph{Sci Rep} \bold{13}, 2701 (2023). https://doi.org/10.1038/s41598-023-29610-z
+Traag, V.A., and L. Subelj. \emph{Large network community detection by fast label propagation.} Sci. Rep., 2023. \bold{13}(2701). https://doi.org/10.1038/s41598-023-29610-z
+
+Leung, X.Y.I., et al., \emph{Towards real-time community detection in large networks}. Phys. Rev. E, 2009. \bold{79}(066107). https://doi.org/10.1103/PhysRevE.79.066107
 }
 \author{
 Aidan Lakshman <AHL27@pitt.edu>
