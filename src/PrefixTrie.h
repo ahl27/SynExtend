@@ -11,6 +11,7 @@
 //#include <stdio.h>
 
 #define trie_uint uint64_t
+#define dist_uint uint16_t // 16 bits is plenty, can always change later
 #define FALSE 0
 #define TRUE 1
 #define CHAR_OFFSET 31
@@ -19,6 +20,7 @@
 typedef struct leaf {
 	trie_uint count; //(making this uint32_t can save a lot of space)
 	trie_uint index;
+	dist_uint dist; // distance to original label, used for attentuation
 } leaf;
 
 typedef struct prefix {

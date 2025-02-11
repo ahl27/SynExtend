@@ -14,7 +14,6 @@ ExoLabel(edgelistfiles,
               add_self_loops=FALSE,
               ignore_weights=FALSE,
               iterations=0L,
-              inflation=1.05,
               return_table=FALSE,
               consensus_cluster=FALSE,
               use_fast_sort=FALSE,
@@ -46,10 +45,6 @@ Should weights be ignored? If \code{TRUE}, all edges will be treated as an edge 
 
 \item{iterations}{
 Maximum number of times to process each node. If set to zero or \code{NULL}, automatically uses the square root of the max node degree. See "Algorithm Convergence" for more information.
-}
-
-\item{inflation}{
-Inflation parameter for edges. See "Algorithm Convergence" below for a description of this parameter. Higher values speed up algorithm convergence but produce smaller clusters. Defaults to 1.05; set to 1.0 to disable inflation. Can be set to a vector of values when running multiple clusterings (see Details).
 }
 
 \item{return_table}{
@@ -92,21 +87,13 @@ Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FA
 }
 
 \section{Algorithm Convergence}{
-One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce two measures for convergence: \code{inflation} and \code{iterations}.
-
-\code{iterations} is the simpler parameter to understand. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated.
-
-\code{inflation} gradually increases the influence of stronger weighted edges as we see a node more. In other words, the more often we see a node, the more bias we add towards its strongest weighted edges. For each node, we use the following weighting:
-
-\eqn{w' = w^{1+log_2(n-1)}}
-
-Here \eqn{w} is the original edge weight, \eqn{w'} is the new edge weight, and \eqn{n} is the number of times we've already processed the node. After this transformation, the edge weights are renormalized, meaning that large weights tend to get larger, and small weights tend to get smaller. Logarithms prevent the exponents from growing too large, and base 2 is chosen for computational efficiency.
+One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated.
 }
 
 \section{Multiple Clusterings}{
 A large portion of the processing time is reading in the graph object. This leads to a lot of duplicated effort when trying to cluster the same network with multiple parameters.
 
-Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile}, \code{inflation}, and \code{add_self_loops}. If the length of \code{outfile} is greater than 1, both \code{inflation} and \code{add_self_loops} can be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
+Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile} and \code{add_self_loops}. If the length of \code{outfile} is greater than 1, \code{add_self_loops} can be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
 }
 
 \section{Consensus Clustering}{
@@ -116,7 +103,7 @@ Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}. Co
 \value{
 Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has two entries, \code{parameters} and \code{results}.
 
-\code{parameters} is a named vector with the values of \code{inflation} and \code{add_self_loops} used for the clustering.
+\code{parameters} is a named vector with the values of \code{add_self_loops} used for the clustering.
 
 \code{results} differs depending on the value of \code{return_table}.
 
@@ -142,9 +129,9 @@ Third, this algorithm uses disk space to store large objects. As such, please en
 \section{Memory Consumption}{
   Let \eqn{v} be the number of unique nodes, \eqn{d} the average outdegree of nodes, and \eqn{l} the average length of node labels. Note that the number of edges \eqn{e} is equivalent to \eqn{dv}.
 
-  Specific calculations for memory/disk consumption are detailed below. In summary, the absolute worst case memory consumption is roughly \eqn{(24l+16)v} bytes, and the maximum disk consumption during computation is \eqn{16dv} bytes (or \eqn{32dv} bytes if \code{use_fast_sort=TRUE}). The final table returned consumes \eqn{(2+l+\log_{10}{v})v} bytes.
+  Specific calculations for memory/disk consumption are detailed below. In summary, the absolute worst case memory consumption is roughly \eqn{(24l+18)v} bytes, and the maximum disk consumption during computation is \eqn{16dv} bytes (or \eqn{32dv} bytes if \code{use_fast_sort=TRUE}). The final table returned consumes \eqn{(2+l+\log_{10}{v})v} bytes.
 
-  ExoLabel builds a trie to keep track of vertex names. Each internal node of the trie consumes 24 bytes, and each leaf node consumes 16 bytes. The lowest possible RAM consumption of the trie (if every label is length \eqn{l} and shares the same prefix of length \eqn{l-1}) is roughly \eqn{40v} bytes, and the maximum RAM consumption (if no two node labels have any prefix in common) is \eqn{(24l + 16)v} bytes. We can generalize this to estimate the total memory consumption as roughly \eqn{(24(l-p)+16)v}, where \eqn{p} is the average length of common prefix between any two node labels.
+  ExoLabel builds a trie to keep track of vertex names. Each internal node of the trie consumes 24 bytes, and each leaf node consumes 18 bytes. The lowest possible RAM consumption of the trie (if every label is length \eqn{l} and shares the same prefix of length \eqn{l-1}) is roughly \eqn{40v} bytes, and the maximum RAM consumption (if no two node labels have any prefix in common) is \eqn{(24l + 18)v} bytes. We can generalize this to estimate the total memory consumption as roughly \eqn{(24(l-p)+18)v}, where \eqn{p} is the average length of common prefix between any two node labels.
 
   ExoLabel also uses a number of internal caches to speed up read/writes from files. These caches take around 200MB of RAM in total. Note that this calculation does not include the RAM required for R itself, which is on the order of 300MB on my machine. It also uses an internal queue for processing nodes, which consumes roughly \eqn{10v} bytes, and an internal index of size \eqn{8v} bytes.
 
@@ -171,21 +158,9 @@ print(res)
 ###########################
 ### Multiple Clustering ###
 ###########################
-
-## Run with multiple inflation values
-tfs <- replicate(3, tempfile())
-p1 <- ExoLabel(edgefile, tfs,
-                inflation=c(2,3,4),
-                return_table = TRUE)
-
 ## Run with multiple add_self_loops values
+tfs <- replicate(3, tempfile())
 p2 <- ExoLabel(edgefile, tfs,
-                add_self_loops=c(0,0.5,1),
-                return_table = TRUE)
-
-## Vary both parameters
-p3 <- ExoLabel(edgefile, tfs,
-                inflation=c(2,3,4),
                 add_self_loops=c(0,0.5,1),
                 return_table = TRUE)
 }
