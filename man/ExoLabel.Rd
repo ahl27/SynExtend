@@ -11,8 +11,10 @@ Runs Fast Label Propagation using disk space for constant memory complexity.
 ExoLabel(edgelistfiles,
               outfile=tempfile(),
               mode=c("undirected", "directed"),
+              weight_type=c("absolute", "probability"),
               add_self_loops=FALSE,
               ignore_weights=FALSE,
+              prob_rescaling=2.0,
               iterations=0L,
               return_table=FALSE,
               consensus_cluster=FALSE,
@@ -35,12 +37,20 @@ File to write final clusters to. Optional, defaults to a temporary file. Can be 
 String specifying whether edges should be interpreted as undirected (default) or directed. Can be "undirected", "directed", or an unambiguous abbreviation.
 }
 
+\item{weight_type}{
+String specifying whether edges should be treated as raw weights (\code{"absolute"}) or as probabilities (\code{"probability"}). Probabalistic edges are complex and only recommended for advanced users; see "Probabalistic Edges" section for more detail. Can be "absolute", "probability", or an unambiguous abbreviation.
+}
+
 \item{add_self_loops}{
 Should self loops be added to the network? If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
 }
 
 \item{ignore_weights}{
 Should weights be ignored? If \code{TRUE}, all edges will be treated as an edge of weight 1. Must be set to \code{TRUE} if any of \code{edgelistfiles} are two-column tables (start->end only, lacking a weights column).
+}
+
+\item{prob_rescaling}{
+For \code{weight_type="probability"}, defines the shape parameter of the sigmoidal rescaling applied to probabilities. See "Probabalistic Edges" for more detail. Can also be set to a vector when running multiple clusterings. Ignored if \code{weight_type="absolute"}. If set to 0, treats edges as absolute values.
 }
 
 \item{iterations}{
@@ -60,7 +70,7 @@ Should files be sorted using two files or in-place? If \code{TRUE}, ExoLabel wil
 }
 
 \item{verbose}{
-Should status messages (output, progress, etc.) be displayed while running?
+Should status messages (output, progress, etc.) be displayed while running? Output messages are reduced if running in non-interactive mode.
 }
 
 \item{sep}{
@@ -90,6 +100,22 @@ Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FA
 One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated.
 
 Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating the result. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically depending on how many nodes update on each cycle. For more information, see Leung et al. (2009) linked in the References section.
+}
+
+\section{Probabalistic Edges}{
+By default, edge weights are treated as absolute weights. However, setting \code{weight_type="probability"} will instead treat edges as probabilities. This assumes that all edges have weights between 0.0 and 1.0. This functionality is only recommended for advanced users.
+
+When calculating which label has the strongest weight, ExoLabel performs two intermediate operations. First, it converts each weight \eqn{w} to a p-value with \eqn{p = 1-w}. Next, it applies the following sigmoidal transformation to each p-value:
+
+\eqn{f(p) = \frac{p^{cd}}{p^{cd} + (1-p^c)^d}}
+
+This is a sigmoidal equation where \eqn{f(0) = 0} and \eqn{f(1)=1}.
+
+\eqn{c} controls the inflection point of the equation, meaning where \eqn{f(x) = 0.5}. This is automatically set to be the self loop weight if it exists, or 0.5 otherwise. Note: "setting to 0.5" means setting \eqn{c} to the value such that a weight of 0.5 becomes 0.5 (after the p-value transformation), not setting \eqn{c} itself to 0.5. Values greater than the inflection point are inflated, and values less than the inflection point are deflated.
+
+\eqn{d} controls the shape of the curve itself. Larger values make the function more steep, becoming a step function in the limit. Smaller values make the function less steep, becoming a flat line in the limit. This value is set by the \code{prob_rescaling} parameter. A value of 0 will cause ExoLabel to skip rescaling entirely and instead treat edges as absolute values. Negative values cause an inverted weighting.
+
+Finally, ExoLabel takes the negative logarithm of these transformed p-values, and then proceeds in normal operation. This means that summing weights corresponds to multiplying p-values, with weights close to 0 mapped to 0, and weights close to 1 mapped to very large numbers.
 }
 
 \section{Multiple Clusterings}{
