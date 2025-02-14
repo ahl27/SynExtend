@@ -4,6 +4,7 @@ leaf *alloc_leaf() {
 	leaf *node = safe_malloc(sizeof(leaf));
 	node->count = 0;
 	node->index = 0;
+	node->dist = 0;
 	return node;
 }
 

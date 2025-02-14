@@ -2,7 +2,7 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
                           ignore_weights=FALSE,
-                          iterations=0L, inflation=1.05,
+                          iterations=0L,
                           return_table=FALSE,
                           consensus_cluster=FALSE,
                           use_fast_sort=FALSE,
@@ -14,11 +14,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else {
     iterations <- as.integer(iterations)
   }
-  if(!is.numeric(inflation)){
-    stop("'inflation' must be a numeric value")
-  } else {
-    inflation <- as.numeric(inflation)
-  }
   if(iterations > 2^15){
     warning("'iterations' currently only supports signed 16-bit numbers, defaulting to max possible value of 32767.")
     iterations <- 32767L
@@ -26,11 +21,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(is.na(iterations) || is.null(iterations) || is.infinite(iterations) || iterations < 0){
     warning("Invalid value of 'iterations', will determine automatically from node degree.")
     iterations <- 0L
-  }
-  if(any(is.infinite(inflation)) || any(is.na(inflation)) || any(inflation < 0)){
-    warning("Some invalid value of 'inflation', defaulting to 1.0")
-    p <- is.infinite(inflation) | is.na(inflation) | inflation < 0
-    inflation[p] <- 1.0
   }
   if(!is.numeric(add_self_loops) && !is.logical(add_self_loops)){
     stop("value of 'add_self_loops' should be numeric or logical")
@@ -53,15 +43,24 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(!is.logical(use_fast_sort)){
     stop("invalid value for 'use_fast_sort' (should be TRUE or FALSE)")
   }
-  if(length(inflation) == 1){
-    inflation <- rep(inflation, length(outfile))
-  }
   if(length(add_self_loops) == 1){
     add_self_loops <- rep(add_self_loops, length(outfile))
   }
-  if(length(outfile) != length(inflation) || length(outfile) != length(add_self_loops)){
-    stop("If more than one outfile is provided, 'inflation' and 'add_self_loops' must be the ",
-         "either the same length as 'outfile' or length 1.")
+  if(length(outfile) != length(add_self_loops)){
+      stop("If more than one outfile is provided, 'add_self_loops' must be ",
+           "either the same length as 'outfile' or length 1.")
+  }
+  if(!is.logical(verbose) || !is.numeric(verbose)){
+    if(as.integer(verbose) != verbose){
+      warning("Coercing non-integer argument provided to 'verbose'")
+    }
+    verbose_int <- 0L
+    if(is.numeric(verbose)){
+      ## more for internal use
+      verbose_int <- as.integer(verbose)
+    } else if(verbose){
+      verbose_int <- ifelse(interactive(), 2L, 1L)
+    }
   }
   # verify that the first few lines of each file are correct
   if(!all(file.exists(edgelistfiles))) stop("edgelist file does not exist")
@@ -119,30 +118,29 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   is_undirected <- mode == "undirected"
   outfile <- file.path(normalizePath(dirname(outfile), mustWork=TRUE), basename(outfile))
 
-  if(verbose) cat("Temporary files stored at ", tempfiledir, "\n")
+  if(verbose_int > 0L) cat("Temporary files stored at ", tempfiledir, "\n")
 
   seps <- paste(sep, "\n", sep='')
 
   .Call("R_LPOOM_cluster", edgelistfiles, length(edgelistfiles),
         tempfiledir, outfile, seps, iterations,
-        verbose, is_undirected, add_self_loops, ignore_weights,
-        consensus_cluster, inflation, !use_fast_sort)
+        verbose_int, is_undirected, add_self_loops, ignore_weights,
+        consensus_cluster, !use_fast_sort)
 
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
   file.remove(tempfiledir)
   retval <- list()
   for(i in seq_along(outfile)){
+    param_vec <- c(add_self_loops=add_self_loops[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")
       if(file.exists(outfile[i])) file.remove(outfile[i])
-      retval[[i]] <- list(parameters=c(inflation=inflation[i],
-                                      add_self_loops=add_self_loops[i]),
+      retval[[i]] <- list(parameters=param_vec,
                           results=tab)
     } else {
-      retval[[i]] <- list(parameters=c(inflation=inflation[i],
-                                       add_self_loops=add_self_loops[i]),
+      retval[[i]] <- list(parameters=param_vec,
                           results=outfile[i])
     }
   }
@@ -166,7 +164,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
   exp_size_internal_inplace <- 16*num_edges*ifelse(is_undirected, 2, 1)
   exp_size_internal <- 32*num_edges*ifelse(is_undirected, 2, 1)
   # rough guess at trie size + edge reading buffer
-  exp_size_ram <- 24*node_name_length + 16 * num_v * 2 + FRCS*16 + 40960
+  exp_size_ram <- 24*node_name_length + 18 * num_v * 2 + FRCS*16 + 40960
   if(num_edges > FRCS){
     # internal buffers for mergesorting, not subtracting 1 because we need an
     # additional buffer for copying data around in the in-place merge
