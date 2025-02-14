@@ -92,9 +92,6 @@
 #define FILE_READ_CACHE_SIZE 8192*4
 #define CLUSTER_MIN_WEIGHT 0.01
 
-// defines the PID value that maps to 0.5
-#define PID_INFLECTION_VALUE 0.4
-
 /*************/
 /* Constants */
 /*************/
@@ -201,8 +198,6 @@ static void **GLOBAL_mergebuffers = NULL;
 static LoserTree *GLOBAL_mergetree = NULL;
 static double GLOBAL_max_weight = 1.0;
 static l_uint GLOBAL_verts_changed = 0;
-// c = -1 / log_2(1-x), where x is the value we want to map to 0.5
-static double PID_C = 1;
 
 /***************************/
 /* Struct Helper Functions */
@@ -354,15 +349,6 @@ static inline float sigmoid_transform(const float w, const double slope){
   const float cutoff = 0.1;
   float r = 1 / (1+exp(-1*slope*(w-scale)));
   return r > cutoff ? r : 0;
-}
-
-static inline float pid_transform(const float w, const double shape){
-  // function is \frac{x^{cd}}{x^{cd} + (1-x^c)^d}
-  if(w > 1) error("Attempted to convert probability greater than 1! (received %.2f)", w);
-  double p1 = pow(1-w, PID_C);
-  double p2 = pow(p1, shape), p3 = pow(1-p1, shape);
-  double r = fmax(p2 / (p2+p3), 1.17549435e-38);
-  return -1*log2(r);
 }
 
 static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
@@ -1444,7 +1430,7 @@ static void add_remaining_to_queue(l_uint new_clust, leaf **neighbors,
 }
 
 static void update_node_cluster(l_uint ind,
-                          float self_loop_weight, float pid_shape,
+                          float self_loop_weight,
                           aq_int times_seen,
                           FILE *offsets, FILE *weightsfile, FILE *neighborfile,
                           ArrayQueue *queue, float atten_param){
@@ -1471,8 +1457,6 @@ static void update_node_cluster(l_uint ind,
   l_uint *clusts;
   l_uint *indices;
   leaf **neighbors;
-
-  if(pid_shape != 0) self_loop_weight = pid_transform(self_loop_weight, pid_shape);
 
   // move to information for the vertex and read in number of edges
   // TODO: can we put this in the trie?
@@ -1502,7 +1486,6 @@ static void update_node_cluster(l_uint ind,
   // read in the clusters
   for(l_uint i=0; i<num_edges; i++){
     neighbors[i] = GLOBAL_all_leaves[clusts[i]];
-    if(pid_shape != 0) weights_arr[i] = pid_transform(weights_arr[i], pid_shape);
     // attenuate edges, using adaptive scaling
     // see https://doi.org/10.1103/PhysRevE.83.036103, eqns 4-5
     weights_arr[i] *= 1-(atten_param * neighbors[i]->dist);
@@ -1583,7 +1566,7 @@ static void update_node_cluster(l_uint ind,
 static void cluster_file(const char* offsets_fname, const char* weights_fname,
                           const char* neighbor_fname,
                           l_uint num_v, int max_iterations, int v,
-                          float self_loop_weight, float pid_shape){
+                          float self_loop_weight){
   GLOBAL_verts_remaining = num_v;
 
   // main runner function to cluster nodes
@@ -1652,7 +1635,7 @@ static void cluster_file(const char* offsets_fname, const char* weights_fname,
     // or zero (because seen max_iteration times)
     aq_int num_seen = -1*GLOBAL_queue->seen[next_vert];
     if(!num_seen) num_seen = max_iterations;
-    update_node_cluster(next_vert, self_loop_weight, pid_shape, num_seen,
+    update_node_cluster(next_vert, self_loop_weight, num_seen,
                         offsetsfile, weightsfile, neighborfile,
                         GLOBAL_queue, atten_param);
   }
@@ -1800,7 +1783,7 @@ static void resolve_cluster_consensus(const char* clusters, const char* csrheade
 static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
                             const char* neighborfile, const char* dir,
                             l_uint num_v, int num_iter, int v,
-                            float self_loop_weight, float pid_shape,
+                            float self_loop_weight,
                             const double* consensus_weights, const int consensus_len){
 
   /*
@@ -1845,7 +1828,7 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
 
     // cluster with transformed weights
     cluster_file(csrfile, transformedweights, neighborfile,
-                  num_v, num_iter, v, self_loop_weight, pid_shape);
+                  num_v, num_iter, v, self_loop_weight);
 
     if(v >= VERBOSE_BASIC) Rprintf("\tRecording results...\n");
     for(l_uint i=0; i<num_v; i++){
@@ -1867,7 +1850,7 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
 
   if(v >= VERBOSE_BASIC) Rprintf("Clustering on consensus data...\n");
   reset_trie_clusters(num_v);
-  cluster_file(csrfile, weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, pid_shape);
+  cluster_file(csrfile, weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight);
 
   return;
 }
@@ -1944,7 +1927,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
                     SEXP IGNORE_WEIGHTS, SEXP CONSENSUS_WEIGHTS,
-                    SEXP PID_SHAPE, SEXP SORT_INPLACE){
+                    SEXP SORT_INPLACE){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1973,7 +1956,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   GLOBAL_nbuffers = 0;
   GLOBAL_mergetree = NULL;
   GLOBAL_max_weight = 1.0;
-  PID_C = -1/log2(1-PID_INFLECTION_VALUE);
 
   // main files
   const char* dir = CHAR(STRING_ELT(OUTDIR, 0));
@@ -1995,7 +1977,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   // optional parameters
   const int is_undirected = LOGICAL(IS_UNDIRECTED)[0];
   const double* self_loop_weights = REAL(ADD_SELF_LOOPS);
-  const double* pid_shape = REAL(PID_SHAPE);
   const int ignore_weights = LOGICAL(IGNORE_WEIGHTS)[0];
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
 
@@ -2090,18 +2071,15 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   for(int i=0; i<num_ofiles; i++){
     reset_trie_clusters(num_v);
     time1 = clock();
-    // set the c value to self_loop_weight, or 0.5 if none provided
-    PID_C = self_loop_weights[i] != 0 ? self_loop_weights[i] : 0.5;
-    PID_C = -1/log2(1-PID_C);
     if(consensus_len){
       consensus_cluster_oom(tabfile, weightsfile, neighborfile, dir, num_v,
-                            num_iter, verbose, self_loop_weights[i], pid_shape[i],
+                            num_iter, verbose, self_loop_weights[i],
                             consensus_w, consensus_len);
 
     } else {
       if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
       cluster_file(tabfile, weightsfile, neighborfile, num_v, num_iter, verbose,
-                    self_loop_weights[i], pid_shape[i]);
+                    self_loop_weights[i]);
     }
     time2 = clock();
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");

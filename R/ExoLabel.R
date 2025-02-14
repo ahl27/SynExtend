@@ -1,9 +1,7 @@
 ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           mode=c("undirected", "directed"),
-                          weight_type=c("absolute", "probability"),
                           add_self_loops=FALSE,
                           ignore_weights=FALSE,
-                          prob_rescaling=2.0,
                           iterations=0L,
                           return_table=FALSE,
                           consensus_cluster=FALSE,
@@ -11,9 +9,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  weight_type <- match.arg(weight_type)
-  if(weight_type == "absolute")
-    prob_rescaling <- 0
   if(!is.numeric(iterations)){
     stop("'iterations' must be an integer or numeric.")
   } else {
@@ -29,9 +24,6 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   }
   if(!is.numeric(add_self_loops) && !is.logical(add_self_loops)){
     stop("value of 'add_self_loops' should be numeric or logical")
-  }
-  if(!is.numeric(prob_rescaling)){
-    stop("'prob_rescaling' must be numeric")
   }
   if(any(add_self_loops < 0)){
     warning("self loops weight supplied is negative, setting to zero.")
@@ -54,17 +46,21 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(length(add_self_loops) == 1){
     add_self_loops <- rep(add_self_loops, length(outfile))
   }
-  if(length(prob_rescaling) == 1){
-    prob_rescaling <- rep(prob_rescaling, length(outfile))
-  }
-  if(length(outfile) != length(add_self_loops) ||
-     length(outfile) != length(prob_rescaling)){
-    if(weight_type == "absolute")
+  if(length(outfile) != length(add_self_loops)){
       stop("If more than one outfile is provided, 'add_self_loops' must be ",
            "either the same length as 'outfile' or length 1.")
-    else
-      stop("If more than one outfile is provided, 'add_self_loops' and 'prob_rescaling' ",
-            "must be either the same length as 'outfile' or length 1.")
+  }
+  if(!is.logical(verbose) || !is.numeric(verbose)){
+    if(as.integer(verbose) != verbose){
+      warning("Coercing non-integer argument provided to 'verbose'")
+    }
+    verbose_int <- 0L
+    if(is.numeric(verbose)){
+      ## more for internal use
+      verbose_int <- as.integer(verbose)
+    } else if(verbose){
+      verbose_int <- ifelse(interactive(), 2L, 1L)
+    }
   }
   # verify that the first few lines of each file are correct
   if(!all(file.exists(edgelistfiles))) stop("edgelist file does not exist")
@@ -122,29 +118,21 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   is_undirected <- mode == "undirected"
   outfile <- file.path(normalizePath(dirname(outfile), mustWork=TRUE), basename(outfile))
 
-  if(verbose) cat("Temporary files stored at ", tempfiledir, "\n")
+  if(verbose_int > 0L) cat("Temporary files stored at ", tempfiledir, "\n")
 
-  verbose_int <- 0L
-  if(interactive() && verbose){
-    verbose_int <- 2L
-  } else if(verbose){
-    verbose_int <- 1L
-  }
   seps <- paste(sep, "\n", sep='')
 
   .Call("R_LPOOM_cluster", edgelistfiles, length(edgelistfiles),
         tempfiledir, outfile, seps, iterations,
-        verbose, is_undirected, add_self_loops, ignore_weights,
-        consensus_cluster, prob_rescaling, !use_fast_sort)
+        verbose_int, is_undirected, add_self_loops, ignore_weights,
+        consensus_cluster, !use_fast_sort)
 
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
   file.remove(tempfiledir)
   retval <- list()
   for(i in seq_along(outfile)){
-    param_vec <- c(add_self_loops=add_self_loops[i], weight_type=weight_type)
-    if(weight_type == "probability")
-      param_vec["prob_rescaling"] <- prob_rescaling[i]
+    param_vec <- c(add_self_loops=add_self_loops[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")

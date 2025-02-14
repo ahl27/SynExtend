@@ -11,10 +11,8 @@ Runs Fast Label Propagation using disk space for constant memory complexity.
 ExoLabel(edgelistfiles,
               outfile=tempfile(),
               mode=c("undirected", "directed"),
-              weight_type=c("absolute", "probability"),
               add_self_loops=FALSE,
               ignore_weights=FALSE,
-              prob_rescaling=2.0,
               iterations=0L,
               return_table=FALSE,
               consensus_cluster=FALSE,
@@ -37,20 +35,12 @@ File to write final clusters to. Optional, defaults to a temporary file. Can be 
 String specifying whether edges should be interpreted as undirected (default) or directed. Can be "undirected", "directed", or an unambiguous abbreviation.
 }
 
-\item{weight_type}{
-String specifying whether edges should be treated as raw weights (\code{"absolute"}) or as probabilities (\code{"probability"}). Probabalistic edges are complex and only recommended for advanced users; see "Probabalistic Edges" section for more detail. Can be "absolute", "probability", or an unambiguous abbreviation.
-}
-
 \item{add_self_loops}{
 Should self loops be added to the network? If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
 }
 
 \item{ignore_weights}{
 Should weights be ignored? If \code{TRUE}, all edges will be treated as an edge of weight 1. Must be set to \code{TRUE} if any of \code{edgelistfiles} are two-column tables (start->end only, lacking a weights column).
-}
-
-\item{prob_rescaling}{
-For \code{weight_type="probability"}, defines the shape parameter of the sigmoidal rescaling applied to probabilities. See "Probabalistic Edges" for more detail. Can also be set to a vector when running multiple clusterings. Ignored if \code{weight_type="absolute"}. If set to 0, treats edges as absolute values.
 }
 
 \item{iterations}{
@@ -97,31 +87,17 @@ Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FA
 }
 
 \section{Algorithm Convergence}{
-One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated.
+One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated. This can be manually specified, but defaults to the square root of the largest node indegree.
 
-Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating the result. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically depending on how many nodes update on each cycle. For more information, see Leung et al. (2009) linked in the References section.
-}
-
-\section{Probabalistic Edges}{
-By default, edge weights are treated as absolute weights. However, setting \code{weight_type="probability"} will instead treat edges as probabilities. This assumes that all edges have weights between 0.0 and 1.0. This functionality is only recommended for advanced users.
-
-When calculating which label has the strongest weight, ExoLabel performs two intermediate operations. First, it converts each weight \eqn{w} to a p-value with \eqn{p = 1-w}. Next, it applies the following sigmoidal transformation to each p-value:
-
-\eqn{f(p) = \frac{p^{cd}}{p^{cd} + (1-p^c)^d}}
-
-This is a sigmoidal equation where \eqn{f(0) = 0} and \eqn{f(1)=1}.
-
-\eqn{c} controls the inflection point of the equation, meaning where \eqn{f(x) = 0.5}. This is automatically set to be the self loop weight if it exists, or 0.5 otherwise. Note: "setting to 0.5" means setting \eqn{c} to the value such that a weight of 0.5 becomes 0.5 (after the p-value transformation), not setting \eqn{c} itself to 0.5. Values greater than the inflection point are inflated, and values less than the inflection point are deflated.
-
-\eqn{d} controls the shape of the curve itself. Larger values make the function more steep, becoming a step function in the limit. Smaller values make the function less steep, becoming a flat line in the limit. This value is set by the \code{prob_rescaling} parameter. A value of 0 will cause ExoLabel to skip rescaling entirely and instead treat edges as absolute values. Negative values cause an inverted weighting.
-
-Finally, ExoLabel takes the negative logarithm of these transformed p-values, and then proceeds in normal operation. This means that summing weights corresponds to multiplying p-values, with weights close to 0 mapped to 0, and weights close to 1 mapped to very large numbers.
+Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating  results. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. For more information, see Leung et al. (2009) linked in the References section.
 }
 
 \section{Multiple Clusterings}{
 A large portion of the processing time is reading in the graph object. This leads to a lot of duplicated effort when trying to cluster the same network with multiple parameters.
 
 Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile} and \code{add_self_loops}. If the length of \code{outfile} is greater than 1, \code{add_self_loops} can be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
+
+Note that the order to process each node is randomly initialized, so multiple runs on the same parameters may differ due to this initialization step.
 }
 
 \section{Consensus Clustering}{
@@ -131,7 +107,7 @@ Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}. Co
 \value{
 Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has two entries, \code{parameters} and \code{results}.
 
-\code{parameters} is a named vector with the values of \code{add_self_loops} used for the clustering.
+\code{parameters} is a named vector with the values of \code{add_self_loops} used for the clustering. If more parameters are added in the future, they'll be included in this vector.
 
 \code{results} differs depending on the value of \code{return_table}.
 
@@ -153,11 +129,11 @@ While this algorithm can scale to very large graphs, it does have some internal 
 
 Second, nodes are indexed using 54-bit unsigned integers. This means that the maximum possible number of nodes available is 2^54-1, which is about 1.8 quadrillion. As with character limitations, feel free to contact me if this is too restrictive. Alternatively, you can decrease the size of \code{BITS_FOR_WEIGHT} in \code{src/OnDiskLP.c}, but note that this value determines how many bits to use to represent weights internally, so lower values will lead to more error.
 
-Third, this algorithm uses disk space to store large objects. As such, please ensure you have sufficient disk space for the graph you intend to process. I've tried to put safeguards in the code itself, but funky stuff can happen when the OS runs out of space. Use \code{\link{EstimateExoLabel}} to estimate the disk consumption of your graph, and see "Memory Consumption" for more details on how the total disk/memory consumption is calculated. Note that using \code{use_fast_sort=TRUE} will double the maximal disk consumption of the algorithm.
+Third, this algorithm uses disk space to store large objects. As such, please ensure you have sufficient disk space for the graph you intend to process. While there are safeguards in the code itself, unhandleable errors can occur when the OS runs out of space. Use \code{\link{EstimateExoLabel}} to estimate the disk consumption of your graph, and see "Memory Consumption" for more details on how the total disk/memory consumption is calculated. Note that using \code{use_fast_sort=TRUE} will double the maximal disk consumption of the algorithm.
 }
 
 \section{Memory Consumption}{
-  Let \eqn{v} be the number of unique nodes, \eqn{d} the average outdegree of nodes, and \eqn{l} the average length of node labels. Note that the number of edges \eqn{e} is equivalent to \eqn{dv}.
+  Let \eqn{v} be the number of unique nodes, \eqn{d} the average indegree of nodes, and \eqn{l} the average length of node labels. Note that the number of edges \eqn{e} is equivalent to \eqn{dv}.
 
   Specific calculations for memory/disk consumption are detailed below. In summary, the absolute worst case memory consumption is roughly \eqn{(24l+18)v} bytes, and the maximum disk consumption during computation is \eqn{16dv} bytes (or \eqn{32dv} bytes if \code{use_fast_sort=TRUE}). The final table returned consumes \eqn{(2+l+\log_{10}{v})v} bytes.
 
