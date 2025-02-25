@@ -137,7 +137,7 @@ SummarizePairs <- function(SynExtendObject,
   }
   
   AA_matrix <- DECIPHER:::.getSubMatrix("PFASUM50")
-  NT_matrix <- DECIPHER:::.nucleotideSubstitutionMatrix(c(2, -1), 1)
+  NT_matrix <- DECIPHER:::.nucleotideSubstitutionMatrix(2L, -1L, 1L)
   
   feature_match <- match(x = ObjectIDs,
                          table = GeneCallIDs)

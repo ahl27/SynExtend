@@ -138,6 +138,8 @@ CompetePairs <- function(SynExtendObject,
                                                 },
                                                 FUN.VALUE = vector(mode = "logical",
                                                                    length = 1))]
+    # return(list("communities1" = pairs_by_community,
+    #             "communities2" = conflict_pairs))
     if (length(conflict_pairs) > 0) {
       conflict_rows <- unlist(unname(lapply(X = conflict_pairs,
                                             FUN = function(x) {
