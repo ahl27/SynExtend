@@ -1,3 +1,7 @@
+# SynExtend 1.19.8
+* `ExoLabel` has a new parameter to tune the performance of hop-length attenuation.
+* Documentation and formatting updates.
+
 # SynExtend 1.19.7
 * `ExoLabel` now uses hop-length attenuation to mitigate formation of massive communities.
 * `ExoLabel` no longer supports `inflation`, since attentuation does a better job handling this without introducing additional parameters.
