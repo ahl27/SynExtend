@@ -58,10 +58,19 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \examples{
 library(RSQLite)
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v04b.sqlite",
+                      "Endosymbionts_v05a.sqlite",
                       package = "SynExtend")
-DBCONN <- dbConnect(SQLite(), DBPATH)
+                      
+tmp01 <- tempfile()
+file.copy(from = DBPATH,
+          to = tmp01)
+DBCONN <- dbConnect(SQLite(), tmp01)
 data("Endosymbionts_Pairs01", package = "SynExtend")
+data("Endosymbionts_LinkedFeatures", package = "SynExtend")
+# this will add seqs to the DB
+PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
+            DataBase = tmp01,
+            Verbose = TRUE)
 
 ExpandedPairs <- ExpandDiagonal(SynExtendObject = Endosymbionts_Pairs01,
                                 DataBase01 = DBCONN,

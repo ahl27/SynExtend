@@ -43,7 +43,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 
 \examples{
 ImportedGFF <- gffToDataFrame(GFF = system.file("extdata",
-                                                "GCF_902860225.1_Azoamicus_ciliaticola_assembly_genomic.gff.gz",
+                                                "GCF_023585825.1_ASM2358582v1_genomic.gff.gz",
                                                 package = "SynExtend"),
                               Verbose = TRUE)
 }

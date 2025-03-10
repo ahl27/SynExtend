@@ -207,13 +207,13 @@ PrepareSeqs <- function(SynExtendObject,
     if (length(ph) < 1L) {
       ph <- DefaultTranslationTable
       phkey <- which(GeneCalls[[Count]]$Coding &
-                       (GeneCalls[[Count]]$Type == "gene" | GeneCalls[[Count]]$Type == "pseudogene"))
+                       (width(Features01) %% 3L == 0L))
       CurrentGeneticCode <- getGeneticCode(id_or_name2 = ph,
                                            full.search = FALSE,
                                            as.data.frame = FALSE)
-      Features02 <- suppressWarnings(translate(x = Features01[phkey],
-                                                        genetic.code = CurrentGeneticCode,
-                                                        if.fuzzy.codon = "solve"))
+      Features02 <- translate(x = Features01[phkey],
+                              genetic.code = CurrentGeneticCode,
+                              if.fuzzy.codon = "solve")
       Features02 <- Features02[order(phkey)]
       # print(length(Features02))
     } else {
@@ -224,29 +224,29 @@ PrepareSeqs <- function(SynExtendObject,
       
       for (m4 in seq_along(ph)) {
         matchph <- which(GeneCalls[[Count]]$Translation_Table == ph[m4] &
-                           GeneCalls[[Count]]$Coding &
-                           (GeneCalls[[Count]]$Type == "gene" | GeneCalls[[Count]]$Type == "pseudogene"))
+                           (width(Features01) %% 3L == 0L) &
+                           GeneCalls[[Count]]$Coding)
         phkey[[m4]] <- matchph
         CurrentGeneticCode <- getGeneticCode(id_or_name2 = ph[m4],
                                              full.search = FALSE,
                                              as.data.frame = FALSE)
-        Features02[[m4]] <- suppressWarnings(translate(x = Features01[matchph],
-                                                                genetic.code = CurrentGeneticCode,
-                                                                if.fuzzy.codon = "solve"))
+        Features02[[m4]] <- translate(x = Features01[matchph],
+                                      genetic.code = CurrentGeneticCode,
+                                      if.fuzzy.codon = "solve")
       }
       Features02 <- do.call(c,
-                                     Features02)
+                            Features02)
       phkey <- unlist(phkey)
       Features02 <- Features02[order(phkey)]
       
     }
     # rewrite ph to provide the correct names for the features
-    ph <- GeneCalls[[Count]]$Coding & (GeneCalls[[Count]]$Type == "gene" | GeneCalls[[Count]]$Type == "pseudogene")
+    ph <- GeneCalls[[Count]]$Coding & (width(Features01) %% 3L == 0L)
     
     names(Features02) <- paste(rep(names(GeneCalls)[Count], length(Features02)),
-                                        GeneCalls[[Count]]$Index[ph],
-                                        seq(length(Features01))[ph],
-                                        sep = "_")
+                               GeneCalls[[Count]]$Index[ph],
+                               seq(length(Features01))[ph],
+                               sep = "_")
     
     Seqs2DB(seqs = Features01,
             dbFile = dbConn01,

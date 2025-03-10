@@ -243,6 +243,8 @@ SummarizePairs <- function(SynExtendObject,
         # # return(list("a" = DataPool[[feature_match[m1]]]$DNA,
         # #             "b" = DataPool[[feature_match[m1]]]$AA))
         # print("a")
+        # cds values here aren't really CDS values, but an integer value counting
+        # the number of feature ranges pulled from the GFFs
         DataPool[[feature_match[m1]]]$len <- width(DataPool[[feature_match[m1]]]$DNA)
         DataPool[[feature_match[m1]]]$mod <- DataPool[[feature_match[m1]]]$len %% 3L == 0
         DataPool[[feature_match[m1]]]$code <- GeneCalls[[feature_match[m1]]]$Coding
@@ -267,7 +269,7 @@ SummarizePairs <- function(SynExtendObject,
           #             DataPool[[m1]]$mod,
           #             DataPool[[m1]]$code))
           DataPool[[feature_match[m1]]]$index <- do.call(what = "IndexSeqs",
-                                                         args = c(list("subject" = DataPool[[feature_match[m1]]]$AA[DataPool[[feature_match[m1]]]$mod[DataPool[[feature_match[m1]]]$code]],
+                                                         args = c(list("subject" = DataPool[[feature_match[m1]]]$AA,
                                                                        "verbose" = FALSE),
                                                                   IndexParams))
         } else if (IncludeIndexSearch & IgnoreDefaultStringSet) {
@@ -319,7 +321,7 @@ SummarizePairs <- function(SynExtendObject,
         
         if (IncludeIndexSearch & !IgnoreDefaultStringSet) {
           DataPool[[feature_match[m2]]]$index <- do.call(what = "IndexSeqs",
-                                                         args = c(list("subject" = DataPool[[feature_match[m2]]]$AA[DataPool[[feature_match[m2]]]$mod[DataPool[[feature_match[m2]]]$code]],
+                                                         args = c(list("subject" = DataPool[[feature_match[m2]]]$AA,
                                                                        "verbose" = FALSE),
                                                                   IndexParams))
         } else if (IncludeIndexSearch & IgnoreDefaultStringSet) {
@@ -360,6 +362,29 @@ SummarizePairs <- function(SynExtendObject,
       Subject_Background_AA <- DataPool[[feature_match[m2]]]$aa_backgrounds
       Subject_Background_NT <- DataPool[[feature_match[m2]]]$dna_backgrounds
       S_AA_Register <- DataPool[[feature_match[m2]]]$aa_register
+      # 
+      # return(list("QueryData" = list("dna" = QueryDNA,
+      #                                "aa" = QueryAA,
+      #                                "len" = QNTCount,
+      #                                "mod" = QMod,
+      #                                "code" = QCode,
+      #                                "CDS" = QCDSCount,
+      #                                "struct" = QueryStruct,
+      #                                "index" = QueryIndex,
+      #                                "aa_background" = Query_Background_AA,
+      #                                "nt_background" = Query_Background_NT,
+      #                                "register" = Q_AA_Register),
+      #             "SubjectData" = list("dna" = SubjectDNA,
+      #                                  "aa" = SubjectAA,
+      #                                  "len" = SNTCount,
+      #                                  "mod" = SMod,
+      #                                  "code" = SCode,
+      #                                  "CDS" = SCDSCount,
+      #                                  "struct" = SubjectStruct,
+      #                                  "index" = SubjectIndex,
+      #                                  "aa_background" = Subject_Background_AA,
+      #                                  "nt_background" = Subject_Background_NT,
+      #                                  "register" = S_AA_Register)))
       
       if (IncludeIndexSearch) {
         # step 1: build indexes into the data pool if they don't exist already
@@ -371,25 +396,29 @@ SummarizePairs <- function(SynExtendObject,
           search_df1 <- do.call(what = "SearchIndex",
                                 args = c(list("pattern" = QueryDNA,
                                               "invertedIndex" = SubjectIndex,
+                                              "subject" = SubjectDNA,
                                               "verbose" = FALSE,
                                               "processors" = Processors),
                                          SearchParams))
           search_df2 <- do.call(what = "SearchIndex",
                                 args = c(list("pattern" = SubjectDNA,
                                               "invertedIndex" = QueryIndex,
+                                              "subject" = QueryDNA,
                                               "verbose" = FALSE,
                                               "processors" = Processors),
                                          SearchParams))
         } else {
           search_df1 <- do.call(what = "SearchIndex",
-                                args = c(list("pattern" = QueryAA[QMod[QCode]],
+                                args = c(list("pattern" = QueryAA,
                                               "invertedIndex" = SubjectIndex,
+                                              "subject" = SubjectAA,
                                               "verbose" = FALSE,
                                               "processors" = Processors),
                                          SearchParams))
           search_df2 <- do.call(what = "SearchIndex",
-                                args = c(list("pattern" = SubjectAA[SMod[SCode]],
+                                args = c(list("pattern" = SubjectAA,
                                               "invertedIndex" = QueryIndex,
+                                              "subject" = QueryAA,
                                               "verbose" = FALSE,
                                               "processors" = Processors),
                                          SearchParams))
@@ -411,8 +440,10 @@ SummarizePairs <- function(SynExtendObject,
                              sep = "_")
           
           # from here if search pairs is zero rows, we're done
-          search_pairs <- data.frame("p1" = names(QueryAA[QMod[QCode]])[search_df1$Pattern[search_i1 %in% search_i2]],
-                                     "p2" = names(SubjectAA[SMod[SCode]])[search_df1$Subject[search_i1 %in% search_i2]])
+          # these names are in the frame of the combined search space,
+          # when we subset later 
+          search_pairs <- data.frame("p1" = names(QueryAA)[search_df1$Pattern[search_i1 %in% search_i2]],
+                                     "p2" = names(SubjectAA)[search_df1$Subject[search_i1 %in% search_i2]])
           
           if (nrow(search_pairs) > 0L) {
             
@@ -978,33 +1009,40 @@ SummarizePairs <- function(SynExtendObject,
                                 "Subject" = integer())
             AASelect <- rep(FALSE, nrow(PMatrix))
             NTSelect <- rep(TRUE, nrow(PMatrix))
-            AASubSet <- PMatrix[AASelect, , drop = FALSE]
+            # AASubSet <- PMatrix[AASelect, , drop = FALSE]
             
           } else {
             # spit out the subset vectors and logicals to correctly call both AlignPairs calls
             # and both dfs
-            AASelect <- QMod[PMatrix[, 1L]] & QCode[PMatrix[, 1L]] & SMod[PMatrix[, 2L]] & SCode[PMatrix[, 2L]]
+            # AASelect <- QMod[PMatrix[, 1L]] &
+            #   QCode[PMatrix[, 1L]] &
+            #   SMod[PMatrix[, 2L]] &
+            #   SCode[PMatrix[, 2L]]
+            AASelect <- PMatrix[, 1L] %in% which(QCode & QMod) & PMatrix[, 2L] %in% which(SCode & SMod)
             NTSelect <- !AASelect
-            AASubSet <- PMatrix[AASelect, , drop = FALSE]
-            
-            aa_match1 <- strsplit(x = names(QueryAA),
-                                  split = "_",
-                                  fixed = TRUE)
-            aa_match1 <- as.integer(sapply(X = aa_match1,
-                                           FUN = function(x) {
-                                             x[3]
-                                           }))
-            aa_match2 <- strsplit(x = names(SubjectAA),
-                                  split = "_",
-                                  fixed = TRUE)
-            aa_match2 <- as.integer(sapply(X = aa_match2,
-                                           FUN = function(x) {
-                                             x[3]
-                                           }))
-            df_aa <- data.frame("Pattern" = match(x = AASubSet[, 1L],
-                                                  table = aa_match1),
-                                "Subject" = match(x = AASubSet[, 2L],
-                                                  table = aa_match2))
+            # AASubSet <- PMatrix[AASelect, , drop = FALSE]
+            # df_aa <- data.frame("Pattern" = AASubSet[, 1L],
+            #                     "Subject" = AASubSet[, 2L])
+            df_aa <- data.frame("Pattern" = PMatrix[AASelect, 1L],
+                                "Subject" = PMatrix[AASelect, 2L])
+            # aa_match1 <- strsplit(x = names(QueryAA),
+            #                       split = "_",
+            #                       fixed = TRUE)
+            # aa_match1 <- as.integer(sapply(X = aa_match1,
+            #                                FUN = function(x) {
+            #                                  x[3]
+            #                                }))
+            # aa_match2 <- strsplit(x = names(SubjectAA),
+            #                       split = "_",
+            #                       fixed = TRUE)
+            # aa_match2 <- as.integer(sapply(X = aa_match2,
+            #                                FUN = function(x) {
+            #                                  x[3]
+            #                                }))
+            # df_aa <- data.frame("Pattern" = match(x = AASubSet[, 1L],
+            #                                       table = aa_match1),
+            #                     "Subject" = match(x = AASubSet[, 2L],
+            #                                       table = aa_match2))
             df_nt <- data.frame("Pattern" = PMatrix[NTSelect, 1L],
                                 "Subject" = PMatrix[NTSelect, 2L])
           }
@@ -1090,11 +1128,12 @@ SummarizePairs <- function(SynExtendObject,
             }
             # if there are any AA alignments to do
             WithinQueryAAs <- WithinQueryNucs[AASelect]
-            if (nrow(AASubSet) > 0) {
-              CurrentQCDSs <- QCDSCount[AASubSet[, 1L]]
-              CurrentSCDSs <- SCDSCount[AASubSet[, 2L]]
+            if (sum(AASelect) > 0) {
+              CurrentQCDSs <- QCDSCount[PMatrix[AASelect, 1L]]
+              CurrentSCDSs <- SCDSCount[PMatrix[AASelect, 2L]]
               # loop through the nucleotide anchor positions
               # drop all anchors in cases where there are more than one CDS
+              # i need to fix this eventually ...
               # drop anchors that are out of frame, or that are in NT space
               for (m3 in seq_along(WithinQueryAAs)) {
                 if (CurrentQCDSs[m3] > 1L |
@@ -1132,25 +1171,44 @@ SummarizePairs <- function(SynExtendObject,
             # df_aa$Position <- WithinQueryAAs
             # ph_obj <- WithinQueryAAs
             if (IncludeIndexSearch) {
+              # this should be right, subset the register vector with the feature indices
+              # and as long as the feature indices have been correctly subset ahead of time
+              # you'll get the AAStringSet index positions in Pattern and Subject
               full_aa_set <- paste(df_aa$Pattern,
                                    df_aa$Subject,
                                    sep = "_")
               # this isn't right because these need to be indexed to the
               # available coding sequences
-              aa_w_index <- paste(match(x = search_pairs$f1,
-                                        table = aa_match1),
-                                  match(x = search_pairs$f2,
-                                        table = aa_match2),
-                                  sep = "_")
+              # 
+              # aa_w_ind_hits <- paste(match(x = search_pairs$f1,
+              #                           table = aa_match1),
+              #                     match(x = search_pairs$f2,
+              #                           table = aa_match2),
+              #                     sep = "_")
+              # these indices are extracted from the feature *names* which come from
+              # the comprehensive indexing, not the indexing of the AAStringSet alone
+              aa_w_ind_hits <- paste(search_pairs$f1,
+                                     search_pairs$f2,
+                                     sep = "_")
               # return(list("a" = full_aa_set,
-              #             "b" = aa_w_index))
-              WithinQueryAAs[match(x = aa_w_index,
+              #             "b" = aa_w_ind_hits,
+              #             "c" = search_pairs,
+              #             "d" = WithinQueryAAs,
+              #             "e" = df_aa,
+              #             "f" = PMatrix,
+              #             "g" = AASelect))
+              WithinQueryAAs[match(x = aa_w_ind_hits,
                                    table = full_aa_set)] <- search_pairs$f_hits
             }
             df_aa$Position <- WithinQueryAAs
+            df_aa$Pattern <- Q_AA_Register[df_aa$Pattern]
+            df_aa$Subject <- S_AA_Register[df_aa$Subject]
+            # return(list("a" = df_aa,
+            #             "b" = QueryAA,
+            #             "c" = SubjectAA))
             df_aa$Position <- mapply(SIMPLIFY = FALSE,
                                      FUN = function(x, y, z) {
-                                       if (length(x) > 4) {
+                                       if (length(x) >= 4) {
                                          cbind(matrix(0L,
                                                       4),
                                                x,
@@ -1331,7 +1389,7 @@ SummarizePairs <- function(SynExtendObject,
             QCode <- rep(FALSE,
                          length(QCode))
           }
-          AASelect <- QCode[PMatrix[, 1L]] & QMod[PMatrix[, 1L]] & SCode[PMatrix[, 2L]] & SMod[PMatrix[, 2L]]
+          # AASelect <- QCode[PMatrix[, 1L]] & QMod[PMatrix[, 1L]] & SCode[PMatrix[, 2L]] & SMod[PMatrix[, 2L]]
           # return(list("AASelect" = AASelect,
           #             "QCode" = QCode[PMatrix[, 1L]],
           #             "QMod" = QMod[PMatrix[, 1L]],

@@ -45,12 +45,17 @@ Nicholas Cooley \email{npc19@pitt.edu}
 }
 \examples{
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v04a.sqlite",
+                      "Endosymbionts_v05a.sqlite",
                       package = "SynExtend")
-                      
+tmp01 <- tempfile()
 data("Endosymbionts_LinkedFeatures", package = "SynExtend")
+
+file.copy(from = DBPATH,
+          to = tmp01)
 # this will add seqs to the DB
-# PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
-#             DataBase = DBPATH,
-#             Verbose = TRUE)
+PrepareSeqs(SynExtendObject = Endosymbionts_LinkedFeatures,
+            DataBase = tmp01,
+            Verbose = TRUE)
+file.info(DBPATH)$size
+file.info(tmp01)$size
 }

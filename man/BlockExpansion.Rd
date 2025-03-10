@@ -61,7 +61,7 @@ Nicholas Cooley \email{npc19@pitt.edu}
 # please see the new ExpandDiagonal() function.
 library(RSQLite)
 DBPATH <- system.file("extdata",
-                      "Endosymbionts_v04a.sqlite",
+                      "Endosymbionts_v05a.sqlite",
                       package = "SynExtend")
                       
 data("Endosymbionts_LinkedFeatures", package = "SynExtend")
