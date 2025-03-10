@@ -11,6 +11,7 @@
 
 # data was regenerated again on 2024 04 25 for a set of new functions and
 # the deprecation of some old ones.
+# data was regenerated again on 2025 03 10 for some function adjustments
 # source(file = "~/Packages/SynExtend/R/SummarizePairs.R", echo = FALSE)
 # source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
 # source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
@@ -19,10 +20,8 @@ suppressMessages(library(SynExtend))
 suppressMessages(library(RSQLite))
 
 # data was regenerated again on 2025 02 08 for a new function
-source(file = "~/Packages/SynExtend/R/CompetePairs.R", echo = FALSE)
-source(file = "~/Packages/SynExtend/R/ClusterByK.R", echo = FALSE)
+source(file = "~/Packages/SynExtend/R/PrepareSeqs.R", echo = FALSE)
 source(file = "~/Packages/SynExtend/R/SummarizePairs.R", echo = FALSE)
-source(file = "~/Packages/SynExtend/R/ExpandDiagonal.R", echo = FALSE)
 
 TODAYSDATE <- paste0(unlist(strsplit(x = as.character(Sys.time()),
                                      split = "-| ")[[1]][1:3]),
@@ -56,50 +55,51 @@ if (length(FtPPaths) > 4L) {
                      replace = FALSE)
 }
 
-FNAs <- unname(sapply(FtPPaths,
-                      function(x) paste(x,
-                                        "/",
-                                        strsplit(x,
-                                                 split = "/",
-                                                 fixed = TRUE)[[1]][10],
-                                        "_genomic.fna.gz",
-                                        sep = "")))
+adds <- mapply(SIMPLIFY = TRUE,
+               USE.NAMES = FALSE,
+               FUN = function(x, y) {
+                 paste0(x,
+                        "/",
+                        y[10],
+                        c("_genomic.fna.gz",
+                          "_genomic.gff.gz",
+                          "_protein.faa.gz"))
+               },
+               x = FtPPaths,
+               y = strsplit(x = FtPPaths,
+                            split = "/",
+                            fixed = TRUE))
+fnas <- adds[1, , drop = TRUE]
+gffs <- adds[2, , drop = TRUE]
+amns <- adds[3, , drop = TRUE]
 
-GFFs <- unname(sapply(FtPPaths,
-                      function(x) paste(x,
-                                        "/",
-                                        strsplit(x,
-                                                 split = "/",
-                                                 fixed = TRUE)[[1]][10],
-                                        "_genomic.gff.gz",
-                                        sep = "")))
 
 ###### -- Data import ---------------------------------------------------------
-# save off GFFs as external non-R data
+# save off gffs as external non-R data
 # save off `GeneCalls` as an object for examples
 
 # save off one GFF for `gffToDataFrame's example`
 CURLCOMMAND <- paste0("curl --output ",
                       paste0("~/Packages/SynExtend/inst/extdata/",
-                             unlist(regmatches(x = GFFs[1],
+                             unlist(regmatches(x = gffs[1],
                                                m = gregexpr(pattern = "[^/]+\\.gff\\.gz",
-                                                            text = GFFs[1])))),
+                                                            text = gffs[1])))),
                       " ",
-                      GFFs[1])
+                      gffs[1])
 
 system(command = CURLCOMMAND,
        intern = FALSE)
 
 Endosymbionts_GeneCalls <- vector(mode = "list",
-                                    length = length(GFFs))
+                                    length = length(gffs))
 
-VignetteDB01 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v04a.sqlite"
-VignetteDB02 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v04b.sqlite"
+VignetteDB01 <- "~/Packages/SynExtend/inst/extdata/Endosymbionts_v05a.sqlite"
+VignetteDB02 <- tempfile()
 
-for (m1 in seq_along(GFFs)) {
-  Endosymbionts_GeneCalls[[m1]] <- gffToDataFrame(GFF = GFFs[m1],
+for (m1 in seq_along(gffs)) {
+  Endosymbionts_GeneCalls[[m1]] <- gffToDataFrame(GFF = gffs[m1],
                                                     Verbose = TRUE)
-  Seqs2DB(seqs = FNAs[m1],
+  Seqs2DB(seqs = fnas[m1],
           type = "FASTA",
           dbFile = VignetteDB01,
           identifier = as.character(m1),
@@ -154,7 +154,7 @@ save(Endosymbionts_Pairs01,
 ###### -- Clustering ----------------------------------------------------------
 
 Endosymbionts_Pairs02 <- ClusterByK(SynExtendObject = Endosymbionts_Pairs01,
-                                    ClusterScalar = 3,
+                                    ClusterScalar = 5,
                                     ShowPlot = TRUE,
                                     Verbose = TRUE)
 
