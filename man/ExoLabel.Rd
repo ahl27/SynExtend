@@ -12,6 +12,7 @@ ExoLabel(edgelistfiles,
               outfile=tempfile(),
               mode=c("undirected", "directed"),
               add_self_loops=FALSE,
+              attenuation_power=1,
               ignore_weights=FALSE,
               iterations=0L,
               return_table=FALSE,
@@ -37,6 +38,10 @@ String specifying whether edges should be interpreted as undirected (default) or
 
 \item{add_self_loops}{
 Should self loops be added to the network? If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
+}
+
+\item{attenuation_power}{
+Controls rate of dynamic scaling for label-hop attenuation. Defaults to 1, set to 0 to disable label-hop attenuation. See "Algorithm Convergence" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see Details).
 }
 
 \item{ignore_weights}{
@@ -89,13 +94,13 @@ Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FA
 \section{Algorithm Convergence}{
 One of the main issues of Label Propagation algorithms is that they can fail to converge. Consider an unweighted directed graph with four nodes connected in a loop. That is, \code{A->B, B->C, C->D, D->A}. If \code{A,C} are in cluster 1 and \code{B,D} are in cluster 2, this algorithm could keep processing all the nodes in a loop and never converge. To solve this issue, we introduce an additional measure for convergence controlled by \code{iterations}. If \code{iterations=x}, then we only allow the algorithm to process each node \code{x} times. Once a given node has been seen \code{x} times, it is no longer updated. This can be manually specified, but defaults to the square root of the largest node indegree.
 
-Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating  results. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. For more information, see Leung et al. (2009) linked in the References section.
+Additionally, ExoLabel incorporates label hop attenuation to reduce the chance of a single massive cluster dominating  results. In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. Each node's attenuated weight is calculated as \eqn{w' = (1-p^ad)w}, where \eqn{w} the node weight, \eqn{p} the proportion of nodes that changed label in the previous iteration, \eqn{a} the attenuation power, and \eqn{d} the distance from the initial label. Larger values of \code{attenuation_power} create larger clusters, whereas smaller values create smaller clusters. The default value of 1 recovers the original implementation provided in Leung et al. (2009), linked in the References section. Passing a value of 0 disables attenuation entirely rather than returning all singleton clusters.
 }
 
 \section{Multiple Clusterings}{
 A large portion of the processing time is reading in the graph object. This leads to a lot of duplicated effort when trying to cluster the same network with multiple parameters.
 
-Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile} and \code{add_self_loops}. If the length of \code{outfile} is greater than 1, \code{add_self_loops} can be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
+Multiple clusterings on the same network are supported by sending vectors of input to \code{outfile} and \code{add_self_loops} or \code{attenuation_power}. If the length of \code{outfile} is greater than 1, \code{add_self_loops} and \code{attenuation_power} can each be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
 
 Note that the order to process each node is randomly initialized, so multiple runs on the same parameters may differ due to this initialization step.
 }
@@ -107,7 +112,7 @@ Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}. Co
 \value{
 Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has two entries, \code{parameters} and \code{results}.
 
-\code{parameters} is a named vector with the values of \code{add_self_loops} used for the clustering. If more parameters are added in the future, they'll be included in this vector.
+\code{parameters} is a named vector with the values of \code{add_self_loops} and \code{attenuation_power} used for the clustering. If more parameters are added in the future, they'll be included in this vector.
 
 \code{results} differs depending on the value of \code{return_table}.
 

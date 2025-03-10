@@ -1,6 +1,7 @@
 ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
+                          attenuation_power=1,
                           ignore_weights=FALSE,
                           iterations=0L,
                           return_table=FALSE,
@@ -43,12 +44,25 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(!is.logical(use_fast_sort)){
     stop("invalid value for 'use_fast_sort' (should be TRUE or FALSE)")
   }
+  if(!is.numeric(attenuation_power)){
+    stop("'attenuation_power' must be a valid numeric value")
+  } else if (is.integer(attenuation_power)){
+    attenuation_power <- as.numeric(attenuation_power)
+  }
+  if(is.na(attenuation_power) || is.null(attenuation_power) || is.infinite(attenuation_power)){
+    stop("'attenuation_power' must be a valid numeric value")
+  }
   if(length(add_self_loops) == 1){
     add_self_loops <- rep(add_self_loops, length(outfile))
   }
-  if(length(outfile) != length(add_self_loops)){
-      stop("If more than one outfile is provided, 'add_self_loops' must be ",
-           "either the same length as 'outfile' or length 1.")
+  if(length(attenuation_power) == 1){
+    attenuation_power <- rep(attenuation_power, length(outfile))
+  }
+  if(length(outfile) != length(add_self_loops) ||
+     length(attenuation_power) != length(add_self_loops)){
+      stop("If more than one outfile is provided, 'add_self_loops' and ",
+          "'attenuation_power' must be either the same length as 'outfile' ",
+          "or length 1.")
   }
   if(!is.logical(verbose) || !is.numeric(verbose)){
     if(as.integer(verbose) != verbose){
@@ -122,25 +136,31 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
 
   seps <- paste(sep, "\n", sep='')
 
-  .Call("R_LPOOM_cluster", edgelistfiles, length(edgelistfiles),
-        tempfiledir, outfile, seps, iterations,
-        verbose_int, is_undirected, add_self_loops, ignore_weights,
-        consensus_cluster, !use_fast_sort)
-
+  graph_stats <- .Call("R_LPOOM_cluster",
+                       edgelistfiles, length(edgelistfiles),
+                       tempfiledir, outfile, seps, iterations,
+                       verbose_int, is_undirected,
+                       add_self_loops, ignore_weights,
+                       consensus_cluster, !use_fast_sort,
+                       attenuation_power)
+  names(graph_stats) <- c("num_vertices", "num_edges")
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
   file.remove(tempfiledir)
   retval <- list()
   for(i in seq_along(outfile)){
-    param_vec <- c(add_self_loops=add_self_loops[i])
+    param_vec <- c(add_self_loops=add_self_loops[i],
+                   attenuation_power=attenuation_power[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")
       if(file.exists(outfile[i])) file.remove(outfile[i])
       retval[[i]] <- list(parameters=param_vec,
+                          graph_stats=graph_stats,
                           results=tab)
     } else {
       retval[[i]] <- list(parameters=param_vec,
+                          graph_stats=graph_stats,
                           results=outfile[i])
     }
   }
