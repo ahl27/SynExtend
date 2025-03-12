@@ -39,7 +39,7 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else if(is.na(ignore_weights) || is.null(ignore_weights)){
     stop("invalid value for 'ignore_weights' (should be TRUE or FALSE)")
   }
-  if(ignore_weights && any(add_self_loops != 0 && add_self_loops != 1)){
+  if(ignore_weights && any(add_self_loops != 0 & add_self_loops != 1)){
     warning("Weight specified for 'add_self_loops' will be ignored")
     add_self_loops <- as.numeric(as.logical(add_self_loops))
   }
@@ -54,7 +54,7 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else if (is.integer(attenuation)){
     attenuation <- as.numeric(attenuation)
   }
-  if(is.na(attenuation) || is.null(attenuation) || is.infinite(attenuation)){
+  if(any(is.na(attenuation) | is.null(attenuation) | is.infinite(attenuation))){
     stop("'attenuation' must be a valid numeric value")
   }
   if(length(add_self_loops) == 1){
