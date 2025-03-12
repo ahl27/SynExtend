@@ -19,7 +19,7 @@ methods and algorithms. Phylogenetic Profiling (PP) methods examine conservation
 of gain/loss events within orthology groups using phylogenetic profiles
 constructed from presence/absence patterns.
 
-\code{predict.EvoWeaver} currently supports nine PP methods:
+\code{predict.EvoWeaver} currently supports ten PP methods:
 \itemize{
   \item \code{'ExtantJaccard'}
   \item \code{'Hamming'}
@@ -41,16 +41,16 @@ with any input type. See \code{\link{EvoWeaver}} for more information on input d
 When \code{Method='Ensemble'} or \code{Method="PhylogeneticProfiling"}, EvoWeaver uses
 methods \code{GLMI}, \code{GLDistance}, \code{PAJaccard}, and \code{PAOverlap}.
 
-All of these methods use presence/absence (PA) profiles, which are binary
+These methods use presence/absence (P/A) profiles, which are binary
 vectors such that 1 implies the corresponding genome has that particular
 gene, and 0 implies the genome does not have that particular gene.
 
 Methods \code{Hamming} and \code{ExtantJaccard} use Hamming and Jaccard distance
-(respectively) of PA profiles to determine overall score.
+(respectively) of P/A profiles to determine overall score.
 
 \code{GLMI} uses mutual information of gain/loss (G/L) vectors to determine
 score, employing a weighting scheme such that concordant gains/losses give positive information,
-discordant gains/losses give negative information, and events that do not cooccur with a gain/loss
+discordant gains/losses give negative information, and events that do not co-occur with a gain/loss
 in the other gene group give no information.
 
 \code{PAJaccard} calculates the centered Jaccard index of P/A profiles, where each clade

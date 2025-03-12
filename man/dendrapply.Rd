@@ -7,10 +7,10 @@ Apply a Function to All Nodes of a Dendrogram
 \description{
 Apply function FUN to each node of a dendrogram recursively. When y <- dendrapply(x, fn), then y is a dendrogram of the same graph structure as x and for each node, y.node[j] <- FUN( x.node[j], ...) (where y.node[j] is an (invalid!) notation for the j-th node of y). Also provides flexibility in the order in which nodes are evaluated.
 
-NOTE: This man page is for the \code{dendrapply} function defined in the \bold{SynExtend} package. See \code{?stats::dendrapply} for the default method (defined in the \bold{stats} package). 
+NOTE: This man page is for the \code{dendrapply} function defined in the \bold{SynExtend} package. See \code{?stats::dendrapply} for the default method (defined in the \bold{stats} package).
 }
 \usage{
-dendrapply(X, FUN, ..., 
+dendrapply(X, FUN, ...,
             how = c("pre.order", "post.order"))
 }
 %- maybe also 'usage' for other objects documented here.
@@ -25,13 +25,13 @@ An R function to be applied to each dendrogram node, typically working on its \c
 potential further arguments passed to \code{FUN}.
 }
   \item{how}{
-one of \code{c("pre.order", "post.order")}, or an unambiguous abbreviation. Determines if nodes should be evaluated according to an preorder (default) or postorder traversal. See details for more information.
+Character; one of \code{c("pre.order", "post.order")}, or an unambiguous abbreviation. Determines if nodes should be evaluated according to a preorder (default) or postorder traversal. See details for more information.
 }
 }
 \details{
-\code{"pre.order"} preserves the functionality of the previous \code{dendrapply}. For each node \code{n}, \code{FUN} is applied first to \code{n}, then to \code{n[[1]]} (and any children it may have), then \code{n[[2]]} and its children, etc. Notably, each node is evaluted \emph{prior to any} of its children.
+\code{"pre.order"} preserves the functionality of the previous \code{dendrapply}. For each node \code{n}, \code{FUN} is applied first to \code{n}, then to \code{n[[1]]} (and any children it may have), then \code{n[[2]]} and its children, etc. Notably, each node is evaluted \emph{prior to any} of its children (i.e., "top-down").
 
-\code{"post.order"} allows for calculations that depend on the children of a given node. For each node \code{n}, \code{FUN} is applied first to \emph{all} children of \code{n}, then is applied to \code{n} itself. Notably, each node is evaluated \emph{after all} of its children.
+\code{"post.order"} allows for calculations that depend on the children of a given node. For each node \code{n}, \code{FUN} is applied first to \emph{all} children of \code{n}, then is applied to \code{n} itself. Notably, each node is evaluated \emph{after all} of its children (i.e., "bottom-up").
 }
 \value{
 Usually a dendrogram of the same (graph) structure as \code{X}. For that, the function must be conceptually of the form \code{FUN <- function(X) \{ attributes(X) <- .....; X \}}, i.e., returning the node with some attributes added or changed.
@@ -50,7 +50,7 @@ The prior implementation of \code{dendrapply} was recursive and inefficient for 
 }
 
 \seealso{
-\code{\link{as.dendrogram}}, \code{\link[base]{lapply}} for applying a function to each component of a list. 
+\code{\link{as.dendrogram}}, \code{\link[base]{lapply}} for applying a function to each component of a list.
 
 \code{\link[base]{rapply}} is particularly useful for applying a function to the leaves of a dendrogram, and almost always be used when the function does not need to be applied to interior nodes due to significantly better performance.
 }
@@ -100,7 +100,7 @@ f <- function(x){
 preorder_try <- dendrapply(dend, f)
 dendrapply(preorder_try, \(x){ print(attr(x, 'newattr')); x })
 
-## trying with postorder, note that children nodes will already 
+## trying with postorder, note that children nodes will already
 ## have been populated, so no character(0) entries
 postorder_try <- dendrapply(dend, f, how='post.order')
 dendrapply(postorder_try, \(x){ print(attr(x, 'newattr')); x })

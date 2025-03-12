@@ -23,7 +23,7 @@ DecisionTree objects comprising random forest models generated with \code{\link{
   an object of class \code{DecisionTree} to plot.
   }
   \item{plotGain}{
-  logical; should the Gini gain or decrease in sum of squared error be plotted for each decision point of the tree?
+  Logical; Determines if the Gini gain (for classification) or decrease in sum of squared error (for regression) should be plotted for each decision point of the tree. If \code{FALSE}, only plots the variable threshold for each decision point.
   }
   \item{...}{
   For \code{plot}, further arguments passed to \code{\link{plot.dendrogram}} and \code{\link{text}}. Arguments prefixed with \code{"text."} (e.g., \code{text.cex}) will be passed to \code{text}, and all other arguments are passed to \code{plot.dendrogram}.

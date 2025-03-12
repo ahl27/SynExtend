@@ -4,12 +4,12 @@
 Plot predictions in a EvoWeb object
 }
 \description{
-EvoWeb objects are outputted from \code{\link{predict.EvoWeaver}}.
+EvoWeb objects can be returned from \code{\link{predict.EvoWeaver}}.
 
 This function plots the predictions in the object using a force-directed embedding
 of connections in the adjacency matrix.
 
-\emph{This function is still a work in progress.}
+\emph{This function is being targetting for additional functionality in later releases.}
 }
 \usage{
 \method{plot}{EvoWeb}(x, NumSims=10,
@@ -22,29 +22,29 @@ of connections in the adjacency matrix.
     A EvoWeb object. See \code{\link{EvoWeb}}
   }
   \item{NumSims}{
-    Number of iterations to run the model for.
+    Integer; Number of iterations to run the model for.
   }
   \item{Gravity}{
-    Strength of Gravity force. See 'Details'.
+    Numeric; Strength of Gravity force. See 'Details'.
   }
   \item{Coulomb}{
-    Strength of Coulomb force. See 'Details'.
+    Numeric; Strength of Coulomb force. See 'Details'.
   }
   \item{Connection}{
-    Strength of Connective force. See 'Details'.
+    Numeric; Strength of Connective force. See 'Details'.
   }
   \item{MoveRate}{
-    Controls how far each point moves in each iteration.
+    Numeric; Controls how far each point moves in each iteration.
   }
   \item{Cutoff}{
-    Cutoff value; if \code{abs(val) < Cutoff}, that Connection is shrunk to zero.
+    Numeric; Cutoff value; if \code{abs(val) < Cutoff}, that Connection is shrunk to zero.
   }
   \item{ColorPalette}{
-    Color palette for graphing. Valid inputs are any palette available in
+    Character; Color palette for graphing. Valid inputs are any palette available in
     \code{palette.pals()}. See \code{\link[grDevices]{palette}} for more info.
   }
   \item{Verbose}{
-    Logical indicating whether to print progress bars and messages. Defaults to \code{TRUE}.
+    Logical; Determines if status messages and progress bars should be displayed while running.
   }
   \item{...}{
     Additional parameters for consistency with generic.

@@ -5,17 +5,17 @@ EvoWeb: Predictions from EvoWeaver
 }
 \docType{data}
 \description{
-EvoWeb objects are outputted from \code{\link{predict.EvoWeaver}}.
+EvoWeb objects can be returned from \code{\link{predict.EvoWeaver}}.
 
 This class wraps the \code{\link{simMat}} object with some other diagnostic
 information intended to help interpret the output of \code{\link{EvoWeaver}}
-predictions..
+predictions.
 }
 
 \details{
 \code{\link{predict.EvoWeaver}} returns a \code{EvoWeb} object, which bundles some methods
 to make formatting and printing of results slightly nicer. This currently
-only implements a \code{plot} function, but future functionality is in the works.
+only implements a \code{plot} function.
 }
 \format{
 An object of class \code{"EvoWeb"}, which inherits from \code{"simMat"}.
@@ -41,7 +41,8 @@ exData <- get(data("ExampleStreptomycesData"))
 # Subset isn't necessary but is faster for a working example
 ew <- EvoWeaver(exData$Genes[1:10])
 
-evoweb <- predict(ew, Method='ExtantJaccard')
+# default return value is a data.frame (recommended for most users)
+evoweb <- predict(ew, Method='ExtantJaccard', ReturnDataFrame=FALSE)
 
 # print out results as an adjacency matrix
 print(evoweb)

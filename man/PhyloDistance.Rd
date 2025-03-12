@@ -23,10 +23,10 @@ PhyloDistance(dend1, dend2,
   tree.
 }
 \item{Method}{
-  Method to use for calculating tree distances. The following values are supported: \code{"CI", "RF", "KF", "JRF"}. See Details for more information.
+  Character; Method to use for calculating tree distances. The following values are supported: \code{"CI", "RF", "KF", "JRF"}. See Details for more information.
 }
 \item{RawScore}{
-  If \code{FALSE}, returns distance between the two trees. If \code{TRUE}, returns the component values used to calculate the distance. This may be preferred for methods like \code{GRF}. See the pages specific to each algorithm for more information on what values are reported.
+  Logical; Determines if the function should return the distance between two trees (\code{FALSE}) or the component values used to calculate the distance (\code{TRUE}). See the pages specific to each algorithm for more information on what values are reported.
 }
 \item{JRFExp}{
 \code{k}-value used in calculation of JRF Distance. Unused if \code{Method} is not \code{"JRF"}.
@@ -38,7 +38,7 @@ This function implements a variety of tree distances, specified by the value of 
 \itemize{
   \item{\code{"RF"}: \link[=RFDist]{Robinson-Foulds Distance}}
   \item{\code{"CI"}: \link[=CIDist]{Clustering Information Distance}}
-  \item{\code{"JRF"}: \link[=JRFDist]{Jaccard-Robinson-Foulds Distance}, equivalent to the Nye Distance Metric when \code{JRFVal=1}}
+  \item{\code{"JRF"}: \link[=JRFDist]{Jaccard-Robinson-Foulds Distance}, equivalent to the Nye Distance Metric when \code{JRFExp=1}}
   \item{\code{"KF"}: \link[=KFDist]{Kuhner-Felsenstein Distance}}
 }
 

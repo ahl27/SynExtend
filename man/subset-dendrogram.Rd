@@ -18,10 +18,10 @@ NOTE: This man page is specifically for \code{subset.dendogram}, see \code{?base
   An object of class \code{'dendogram'}
 }
 \item{subset}{
-  A vector of labels to keep (see \code{invert}).
+  Character; A vector of labels to keep (see \code{invert}).
 }
 \item{invert}{
-  If set to \code{TRUE}, subset to only the leaves \emph{not} in \code{subset}.
+  Logical; If \code{TRUE}, subsets to the leaves \emph{not} in \code{subset}.
 }
 \item{...}{
 Additional arguments for consistency with generic.
@@ -29,7 +29,7 @@ Additional arguments for consistency with generic.
 }
 
 \value{
-An object of class \code{'dendrogram'} corresponding to the subsetted tree.
+An object of class \code{'dendrogram'} corresponding to the subset of the tree.
 }
 
 \author{

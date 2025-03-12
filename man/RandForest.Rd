@@ -65,7 +65,7 @@ RandForest.fit(x, y=NULL,
   new data to predict on, typically provided as a \code{data.frame} object.
   }
   \item{verbose}{
-  logical: should progress be displayed?
+  Logical; Determines if status messages should be displayed while running.
   }
   \item{ntree}{
   number of decision trees to grow.

@@ -15,7 +15,7 @@ Data from \emph{Streptomyces} species to test \code{\link{EvoWeaver}} functional
 }
 \details{
 This dataset contains a number of Clusters of Orthologous Genes (COGs) and a species
-tree for use with EvoWeaver. This dataset showcases an example of using EvoWeaver with
+tree for use with EvoWeaver. This dataset showcases an example using EvoWeaver with
 a list of vectors. Entries in each vector are formatted correctly for use with
 co-localization prediction. Each COG \code{i} contains entries of the form
 \code{a_b_c}, indicating that the gene was found in genome \code{a} on chromosome

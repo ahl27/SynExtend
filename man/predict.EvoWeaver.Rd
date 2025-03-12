@@ -24,10 +24,10 @@ matrix with some extra S3 methods to make printing cleaner.
     A EvoWeaver object
   }
   \item{Method}{
-    Method(s) to use for prediction. This can be a character vector with multiple entries for predicting using multiple methods. See 'Details' for more information.
+    Character; Method(s) to use for prediction. This can be a character vector with multiple entries for predicting using multiple methods. See 'Details' for more information.
   }
   \item{Subset}{
-    Subset of data to predict on. This can either be a vector or a \code{2xN} matrix.
+    Either a vector or a \code{2xN} matrix representing the subset of data to predict on.
 
 
     If a vector, prediction proceeds for all possible pairs of elements specified in the vector
@@ -42,14 +42,14 @@ matrix with some extra S3 methods to make printing cleaner.
     \code{subset=1:3}.
   }
   \item{Processors}{
-    Number of cores to use for methods that support multithreaded execution.
+    Integer; Number of cores to use for methods that support multithreaded execution.
     Setting to \code{NULL} or a negative value will use the value of
     \code{detectCores()},
     or one core if the number of available cores cannot be determined. See Note
     for more information.
   }
   \item{MySpeciesTree}{
-    Phylogenetic tree of all genomes in the dataset. Required for \code{Method=c('RPContextTree', 'GLDistance', 'CorrGL', 'MoransI', 'Behdenna')}. \code{'Behdenna'} requires a rooted, bifurcating tree (other values of \code{Method} can handle arbitrary trees). Note that \code{EvoWeaver} can automatically infer a species tree if initialized with \code{dendrogram} objects.
+    Object of class \code{\link{dendrogram}} representing the phylogenetic relationship of all genomes in the dataset. Required for \code{Method=c('RPContextTree', 'GLDistance', 'CorrGL', 'MoransI', 'Behdenna')}. \code{'Behdenna'} requires a rooted, bifurcating tree (other values of \code{Method} can handle arbitrary trees). Note that \code{EvoWeaver} can automatically infer a species tree if initialized with \code{dendrogram} objects.
   }
   \item{PretrainedModel}{
     A pretrained model for use with ensemble predictions. The default
@@ -63,7 +63,7 @@ matrix with some extra S3 methods to make printing cleaner.
     Has no effect if \code{Method != 'Ensemble'}.
   }
   \item{NoPrediction}{
-    For \code{Method='Ensemble'}, should data be returned prior to making predictions?
+    Logical; determines if data should be returned prior to making prediction for \code{Method='Ensemble'}.
 
     If \code{TRUE}, this will instead return a \link[base]{data.frame} object
     with predictions from each algorithm for each pair. This dataframe is typically
@@ -73,17 +73,16 @@ matrix with some extra S3 methods to make printing cleaner.
     if provided or a built-in otherwise).
   }
   \item{ReturnDataFrame}{
-    Logical indicating whether to return a \code{data.frame} object or a list of \code{EvoWeb} objects.
-    Defaults to \code{TRUE}. Setting this parameter to \code{FALSE} is not recommended for typical users.
+    Logical; Determines if the function should return a \code{data.frame} object or a list of \code{EvoWeb} objects. Setting this parameter to \code{FALSE} is not recommended.
   }
   \item{Verbose}{
-    Logical indicating whether to print progress bars and messages. Defaults to \code{TRUE}.
+    Logical; Determines if status messages and progress bars should be displayed while running.
   }
   \item{CombinePVal}{
-    Logical indicating whether to combine scores and p-values or to return them as separate values. Defaults to \code{TRUE}.
+    Logical; Determines if scores and p-values should be combined or returned as separate values.
   }
   \item{useDNA}{
-    Logical indicating whether to interpret sequences as DNA or AA (only used for Sequence Level methods, see Details).
+    Logical; Determines whether to interpret sequences as DNA or AA (only used for Sequence Level methods, see Details).
   }
   \item{...}{
     Additional parameters for other predictors and consistency with generic.
@@ -111,12 +110,12 @@ following pages:
 
 \item \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Methods}
 
-\item \link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Methods}
+\item \link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Methods}
 }
 
 The standard return type is a \code{data.frame} object with one column per predictor and an additional two columns specifying the genes in each pair. If \code{ReturnDataFrame=FALSE}, this returns a \code{EvoWeb} object. See \code{\link{EvoWeb}} for more information. Use of this parameter is discouraged.
 
-By default, EvoWeaver weights scores by their p-value to correct for spurious correlations. The returned scores are \code{raw_score*(1-p_value)}. If \code{CombinePVal=FALSE}, EvoWeaver will instead return the raw score and the p-value separately. The resulting data.frame will have one column for the raw score (denoted \code{METHOD.score}) and one column for the p-value (denoted \code{METHOD.pval}). **Note: p-values are recorded as (1-p)**. Not all methods support returning p-values separately from the score; in this case, only a \code{METHOD.score} column will be returned.
+By default, EvoWeaver weights scores by their p-value to correct for spurious correlations. The returned scores are \code{raw_score*(1-p_value)}. If \code{CombinePVal=FALSE}, EvoWeaver will instead return the raw score and the p-value separately. The resulting data.frame will have one column for the raw score (denoted \code{METHOD.score}) and one column for the p-value (denoted \code{METHOD.pval}). \bold{Note: p-values are recorded as (1-p)}. Not all methods support returning p-values separately from the score; in this case, only a \code{METHOD.score} column will be returned.
 
 Different methods require different types of input. The constructor
 \code{\link{EvoWeaver}} will notify the user which methods are
@@ -127,13 +126,7 @@ See \code{\link{EvoWeaver}} for more information on input data types.
 
 Complete listing of all supported methods (asterisk denotes a method used in \code{Ensemble}, if possible):
 \itemize{
-  \item \code{'ExtantJaccard'}: Jaccard Index of Presence/Absence (P/A) profiles at extant leaves
-  \item \code{'Hamming'}: Hamming similarity of P/A profiles
   \item * \code{'GLMI'}: MI of G/L profiles
-  \item \code{'PAPV'}: \code{1-p_value} of P/A profiles
-  \item \code{'ProfDCA'}: Direct Coupling Analysis of P/A profiles
-  \item \code{'Behdenna'}: Analysis of Gain/Loss events following Behdenna et al. (2016)
-  \item \code{'CorrGL'}: Correlation of ancestral Gain/Loss events
   \item * \code{'GLDistance'}: Score-based method based on distance between inferred ancestral Gain/Loss events
   \item * \code{'PAJaccard'}: Centered Jaccard distance of P/A profiles with conserved clades collapsed
   \item * \code{'PAOverlap'}: Conservation of ancestral states based on P/A profiles
@@ -144,10 +137,16 @@ Complete listing of all supported methods (asterisk denotes a method used in \co
   \item * \code{'OrientationMI'}: Mutual Information of Gene Relative Orientation
   \item * \code{'GeneVector'}: Correlation of distribution of sequence level residues following Zhao et al. (2022)
   \item * \code{'SequenceInfo'}: Mutual information of sites in multiple sequence alignment
+  \item \code{'ExtantJaccard'}: Jaccard Index of Presence/Absence (P/A) profiles at extant leaves
+  \item \code{'Hamming'}: Hamming similarity of P/A profiles
+  \item \code{'PAPV'}: \code{1-p_value} of P/A profiles
+  \item \code{'ProfDCA'}: Direct Coupling Analysis of P/A profiles
+  \item \code{'Behdenna'}: Analysis of Gain/Loss events following Behdenna et al. (2016)
+  \item \code{'CorrGL'}: Correlation of ancestral Gain/Loss events
 }
 }
 \value{
-Returns a \code{data.frame} object where each row corresponds to a single prediction for a pair of gene groups. The first two columns contain the gene group identifiers for each pair, and the remaining columns contain each prediction.
+If \code{ReturnDataFrame=TRUE}, returns a \code{data.frame} object where each row corresponds to a single prediction for a pair of gene groups. The first two columns contain the gene group identifiers for each pair, and the remaining columns contain each prediction.
 
 If \code{ReturnDataFrame=FALSE}, the return type is a list of \code{EvoWeb} objects. See \code{\link{EvoWeb}} for more info.
 }
@@ -156,15 +155,9 @@ Aidan Lakshman \email{ahl27@pitt.edu}
 }
 
 \note{
-EvoWeaver's publication used a random forest model from the \code{randomForest} package for prediction. The next release of EvoWeaver will include multiple new built-in ensemble methods, but in the interim users are recommended to rely on \code{randomForest} or \code{neuralnet}. Planned algorithms are random forests and feed-forward neural networks. Feel free to contact me regarding other models you would like to see added.
-
   If \code{NumCores} is set to \code{NULL}, EvoWeaver will use one less core than is detected, or one core if \code{detectCores()}
-  cannot detect the number of available cores. This is because of a recurring issue
-  on my machine where the R session takes all available cores and is then locked
-  out of forking processes, with the only solution to restart the entire R session.
-  This may be an issue specific to ARM Macs, but out of an abundance of caution
-  I've made the default setting to be slightly slower but guarantee completion
-  rather than risk bricking a machine.
+  cannot detect the number of available cores. This is because of a potential
+  issue where the R session can consume all available cores and then lose the ability to fork processes, with the only solution to restart the entire R session.
 
 If \code{ReturnDataFrame=FALSE} and \code{CombinePVal=FALSE}, the resulting \code{EvoWeb} objects will contain values of type \code{'complex'}. For each value, the real part denotes the raw score, and the imaginary part denotes \code{1-p}, with \code{p} the p-value.
 }
@@ -180,7 +173,7 @@ If \code{ReturnDataFrame=FALSE} and \code{CombinePVal=FALSE}, the resulting \cod
 
 \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 }
 \examples{
 ##############

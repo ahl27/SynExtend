@@ -5,8 +5,8 @@
 Create a Species Tree from Gene Trees
 }
 \description{
-Given a set of unrooted gene trees, creates a species tree. This function
-works for rooted gene trees, but may not accurately root the resulting tree.
+Given a set of unrooted gene trees, creates a species tree. While this function
+ also works for rooted gene trees, the resulting root may not be accurately placed.
 }
 \usage{
 SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
@@ -17,7 +17,7 @@ SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
   List of \code{dendrogram} objects, where each entry is an unrooted gene tree.
 }
 \item{NAMEFUN}{
-  Optional input specifying a function to apply to each leaf to convert gene tree leaf
+  Optional function to apply to each leaf to convert gene tree leaf
   labels into species names. This function should take as input a character vector
   and return a character vector of the same size. By default equals \code{NULL},
   indicating that gene tree leaves are already labeled with species identifiers.
@@ -25,11 +25,11 @@ SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
 }
 
 \item{Verbose}{
-Should output be displayed?
+Logical; Determines if status messages and progress bars should be displayed while running.
 }
 
 \item{Processors}{
-Number of processors to use for calculating the final species tree.
+Integer; Number of processors to use for calculating the final species tree.
 }
 }
 \details{
