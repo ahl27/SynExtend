@@ -15,7 +15,7 @@
 Similarity Matrices
 }
 \description{
-The \code{simMat} object is an internally utilized class that provides similar 
+The \code{simMat} object is an internally utilized class that provides similar
 functionality to the \code{\link{dist}} object, but with matrix-like accessors.
 
 Like \code{dist}, this object stores values as a vector, reducing memory by
@@ -47,23 +47,23 @@ be provided for this function if desired.
 }
 \item{nelem}{
 Integer; number of elements represented in the matrix. This corresponds to the
-number of rows and columns of the object, so setting \code{nelem=10} would 
+number of rows and columns of the object, so setting \code{nelem=10} would
 produce a \code{10x10} matrix.
 }
 \item{NAMES}{
-Character (Optional); names for each row/column. If provided, this should be 
+Character (Optional); names for each row/column. If provided, this should be
 a character vector of length equal to \code{nelem}.
 }
 \item{DIAG}{
-Logical; Is the diagonal included in the data? If \code{FALSE}, the constructor
+Logical; Determines if the diagonal is included in the data. If \code{FALSE}, the constructor
 generates 1s for the diagonal.
 }
-\item{x}{Various; for \code{print} and \code{Diag}, the \code{"simMat"} object to print. For \code{as.vector} or \code{as.matrix}, the vector or matrix (respectively). Note that \code{as.matrix} expects a symmetric matrix--providing a non-symmetric matrix will take only the upper triangle and produce a warning.}
+\item{x}{For \code{print} and \code{Diag}, the \code{"simMat"} object to print. For \code{as.vector} or \code{as.matrix}, the vector or matrix (respectively). Note that \code{as.matrix} expects a symmetric matrix--providing a non-symmetric matrix will take only the upper triangle and produce a warning.}
 \item{value}{Numeric; value(s) to replace diagonal with.}
 \item{...}{Additional parameters provided for consistency with generic.}
 }
 \details{
-The \code{simMat} object has a very similar format to \code{dist} objects, but 
+The \code{simMat} object has a very similar format to \code{dist} objects, but
 with a few notable changes:
 
 \itemize{
@@ -77,13 +77,13 @@ zeros as in \code{dist} objects.
 
 See the examples for details on using these features.
 
-The number of elements printed when calling \code{print} or \code{show} on a 
+The number of elements printed when calling \code{print} or \code{show} on a
 \code{simMat} object is determined by the \code{"SynExtend.simMat"} option.
 }
 \value{
 \code{simMat} and \code{as.simMat} return an object of class \code{"simMat"}. Internally,
 the object stores the upper triangle of the matrix similar to how \code{dist}
-stores objects. 
+stores objects.
 
 The object has the following attributes (besides \code{"class"} equal to \code{"simMat"}):
 

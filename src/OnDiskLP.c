@@ -1236,6 +1236,7 @@ static void reset_trie_clusters(l_uint num_v){
   for(l_uint i=0; i<num_v; i++){
     l = GLOBAL_all_leaves[i];
     l->count = l->index+1;
+    l->dist = 0;
   }
 
   return;
@@ -1412,7 +1413,7 @@ static void add_remaining_to_queue(l_uint new_clust, leaf **neighbors,
     if(tmp_cl == new_clust || weights[i] < CLUSTER_MIN_WEIGHT) continue;
     tmp_ind = neighbors[i]->index;
     found = 0;
-    for(int j=0; j<ctr; j++){
+    for(l_uint j=0; j<ctr; j++){
       if(neighbors[j]->index == tmp_ind){
         found = 1;
         break;

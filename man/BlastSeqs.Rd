@@ -5,35 +5,35 @@ Run BLAST queries from R
 }
 \description{
 Wrapper to run \href{https://blast.ncbi.nlm.nih.gov/Blast.cgi}{BLAST} queries using the commandline BLAST tool directly from R.
-Can operate on an \code{\link[Biostrings]{XStringSet}} or a \code{FASTA} file. 
+Can operate on an \code{\link[Biostrings]{XStringSet}} or a \code{FASTA} file.
 
-This function requires the BLAST+ commandline tools, which can be downloaded 
-\href{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download}{here}.
+This function requires the BLAST+ commandline tools, which can be downloaded from
+\href{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download}{https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download}.
 }
 \usage{
-BlastSeqs(seqs, BlastDB, 
+BlastSeqs(seqs, BlastDB,
               blastType=c('blastn', 'blastp', 'tblastn', 'blastx', 'tblastx'),
               extraArgs='', verbose=TRUE)
 }
 \arguments{
   \item{seqs}{
-    Sequence(s) to run BLAST query on. This can be either an 
+    Sequence(s) to run BLAST query on. This can be either an
     \code{\link[Biostrings]{XStringSet}} or a path to a FASTA file.
   }
   \item{BlastDB}{
-    Path to FASTA file in a pre-built BLAST Database. These can be built using either \code{\link{MakeBlastDb}} from R or
+    Character; path to FASTA file in a pre-built BLAST Database. These can be built using either \code{\link{MakeBlastDb}} from R or
     the commandline \code{makeblastdb} function from BLAST+. For more information
     on building BLAST DBs, see \href{https://www.ncbi.nlm.nih.gov/books/NBK569841/}{here}.
   }
   \item{blastType}{
-    Type of BLAST query to run. See 'Details' for more information on available types.
+    Character; type of BLAST query to run. See 'Details' for more information on available types.
   }
   \item{extraArgs}{
-    Additional arguments to be passed to the BLAST query
-    executed on the command line. This should be a single character string.
+    Character; additional arguments to be passed to the BLAST query
+    executed on the command line. This should be a single string. (Optional)
   }
   \item{verbose}{
-    Should output be displayed?
+    Logical; should output be displayed? (Optional, default \code{TRUE})
   }
 }
 \details{

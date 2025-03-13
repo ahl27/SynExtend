@@ -5,11 +5,11 @@
 \alias{Ancestral.EvoWeaver}
 \docType{data}
 \title{
-Sequence-Level Predictions for EvoWeaver
+Sequence Level Predictions for EvoWeaver
 }
 \description{
 \code{EvoWeaver} incorporates four classes of prediction, each with multiple
-methods and algorithms. Sequence-Level (SL) methods examine conservation of patterns in sequence data, commonly exhibited due to physical interactions
+methods and algorithms. Sequence Level (SL) methods examine conservation of patterns in sequence data, commonly exhibited due to physical interactions
 between proteins.
 
 \code{predict.EvoWeaver} currently supports three SL methods:
@@ -21,8 +21,8 @@ between proteins.
 }
 
 \details{
-All residue methods require a \code{EvoWeaver} object initialized
-with \code{dendrogram} objects and ancestral states. See \code{\link{EvoWeaver}} for more information on input data types.
+Sequence Level methods require a \code{EvoWeaver} object initialized
+with \code{dendrogram} objects and sequence information stored in the leaves. See \code{\link{EvoWeaver}} for more information on input data types.
 
 When \code{Method='Ensemble'} or \code{Method="SequenceLevel"}, EvoWeaver uses
 methods \code{SequenceInfo} and \code{GeneVector}. The argument \code{useDNA} switches between interpreting sequences as DNA or AA sequences.
@@ -37,7 +37,7 @@ The \code{GeneVector} method uses the natural vector encoding method introduced 
               \qquad\qquad\qquad n_{AA},n_{AC},\dots,n_{TT},\\
               \qquad\qquad\qquad\quad\;\; n_{AAA},n_{AAC},\dots,n_{TTT})}
 
-Here \eqn{n_X} is the raw total count of nucleotide \eqn{X} (or di/trinucleotide). For single nucleotides, we also calculate \eqn{\mu_X}, the mean location of nucleotide \eqn{X}, and \eqn{D_2^X}, the second moment of the location of nucleotide \eqn{X}. The overall natural vector for a COG is calculated as the normalized mean vector from the natural vectors of all component gene sequences. Interaction scores are computed using Pearson's R between each COG's natural vector. These di/trinucleotide counts are by default excluded, but can be included using the \code{extended=TRUE} argument. Using the extended counts has shown minimal increased accuracy at the cost of slower runtime in benchmarking.
+Here \eqn{n_X} is the raw total count of nucleotide \eqn{X} (or di/trinucleotide). For single nucleotides, we also calculate \eqn{\mu_X}, the mean location of nucleotide \eqn{X}, and \eqn{D_2^X}, the second moment of the location of nucleotide \eqn{X}. The overall natural vector for a Cluster of Orthologous Genes (COG) is calculated as the normalized mean vector from the natural vectors of all component gene sequences. Interaction scores are computed using Pearson's R between each COG's natural vector. These di/trinucleotide counts are by default excluded, but can be included using the \code{extended=TRUE} argument. Using the extended counts has shown minimal increased accuracy at the cost of slower runtime in benchmarking.
 
 The \code{Ancestral} method calculates coevolution by looking at correlation of residue mutations near the leaves of each respective gene tree.
 }

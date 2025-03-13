@@ -1,7 +1,7 @@
 ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
-                          attenuation_power=1,
+                          attenuation=TRUE,
                           ignore_weights=FALSE,
                           iterations=0L,
                           return_table=FALSE,
@@ -25,6 +25,8 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   }
   if(!is.numeric(add_self_loops) && !is.logical(add_self_loops)){
     stop("value of 'add_self_loops' should be numeric or logical")
+  } else if (is.logical(add_self_loops)){
+    add_self_loops <- as.numeric(add_self_loops)
   }
   if(any(add_self_loops < 0)){
     warning("self loops weight supplied is negative, setting to zero.")
@@ -37,31 +39,34 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else if(is.na(ignore_weights) || is.null(ignore_weights)){
     stop("invalid value for 'ignore_weights' (should be TRUE or FALSE)")
   }
-  if(ignore_weights && (add_self_loops != 0 || add_self_loops != 1)){
+  if(ignore_weights && any(add_self_loops != 0 & add_self_loops != 1)){
     warning("Weight specified for 'add_self_loops' will be ignored")
-    add_self_loops <- 1
+    add_self_loops <- as.numeric(as.logical(add_self_loops))
   }
   if(!is.logical(use_fast_sort)){
     stop("invalid value for 'use_fast_sort' (should be TRUE or FALSE)")
   }
-  if(!is.numeric(attenuation_power)){
-    stop("'attenuation_power' must be a valid numeric value")
-  } else if (is.integer(attenuation_power)){
-    attenuation_power <- as.numeric(attenuation_power)
+  if(is.logical(attenuation)){
+    attenuation <- as.numeric(attenuation)
   }
-  if(is.na(attenuation_power) || is.null(attenuation_power) || is.infinite(attenuation_power)){
-    stop("'attenuation_power' must be a valid numeric value")
+  if(!is.numeric(attenuation)){
+    stop("'attenuation' must be a valid numeric value")
+  } else if (is.integer(attenuation)){
+    attenuation <- as.numeric(attenuation)
+  }
+  if(any(is.na(attenuation) | is.null(attenuation) | is.infinite(attenuation))){
+    stop("'attenuation' must be a valid numeric value")
   }
   if(length(add_self_loops) == 1){
     add_self_loops <- rep(add_self_loops, length(outfile))
   }
-  if(length(attenuation_power) == 1){
-    attenuation_power <- rep(attenuation_power, length(outfile))
+  if(length(attenuation) == 1){
+    attenuation <- rep(attenuation, length(outfile))
   }
   if(length(outfile) != length(add_self_loops) ||
-     length(attenuation_power) != length(add_self_loops)){
+     length(attenuation) != length(add_self_loops)){
       stop("If more than one outfile is provided, 'add_self_loops' and ",
-          "'attenuation_power' must be either the same length as 'outfile' ",
+          "'attenuation' must be either the same length as 'outfile' ",
           "or length 1.")
   }
   if(!is.logical(verbose) || !is.numeric(verbose)){
@@ -142,7 +147,7 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
                        consensus_cluster, !use_fast_sort,
-                       attenuation_power)
+                       attenuation)
   names(graph_stats) <- c("num_vertices", "num_edges")
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
@@ -150,7 +155,7 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   retval <- list()
   for(i in seq_along(outfile)){
     param_vec <- c(add_self_loops=add_self_loops[i],
-                   attenuation_power=attenuation_power[i])
+                   attenuation=attenuation[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")

@@ -1,5 +1,10 @@
+### -----
+### This function is named FitchParsimony because it's entirely in R
+### Function fitch_parsimony is internal with a faster C-based implementation
+### The latter is not user-exposed and is used in EvoWeaver
+### -----
 FitchParsimony <- function(dend, num_traits, traits_list,
-                           initial_state=rep(0L,num_traits), 
+                           initial_state=rep(0L,num_traits),
                            fill_ambiguous=TRUE){
   if(is.numeric(num_traits))
     num_traits <- as.integer(num_traits)
@@ -21,8 +26,8 @@ FitchParsimony <- function(dend, num_traits, traits_list,
     s <- rep(0L, num_traits)
     if(is.leaf(x)){
       a <- attr(x, 'label')
-      s <- vapply(seq_len(num_traits), 
-                  \(i) as.integer(a %in% traits_list[[i]]), 
+      s <- vapply(seq_len(num_traits),
+                  \(i) as.integer(a %in% traits_list[[i]]),
                   integer(1L))
     } else {
       s1 <- attr(x[[1]], 'FitchState')
@@ -35,11 +40,11 @@ FitchParsimony <- function(dend, num_traits, traits_list,
     attr(x, 'FitchState') <- s
     x
   }, how='post.order')
-  
+
   # set root to 0,0
   if(!is.null(initial_state))
     attr(dend, 'FitchState') <- initial_state
-  
+
   # downward fitch
   dend <- dendrapply(dend, \(x){
     if(!is.leaf(x)){
@@ -52,8 +57,8 @@ FitchParsimony <- function(dend, num_traits, traits_list,
       }
     }
     x
-  }, how='post.order') 
-  
+  }, how='post.order')
+
   if(fill_ambiguous){
     dend <- dendrapply(dend, \(x){
       s <- attr(x, 'FitchState')
@@ -65,6 +70,6 @@ FitchParsimony <- function(dend, num_traits, traits_list,
       x
     }, how='post.order')
   }
-  
+
   dend
 }

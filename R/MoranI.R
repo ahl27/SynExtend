@@ -18,12 +18,8 @@
 # Note also that Dij := 0 when i=j.
 #####
 
-MoranI <- function(values, weights, alternative='two.sided'){
-  hyptest <- pmatch(alternative, c('two.sided', 'less', 'greater'))
-  if(is.na(alternative) || length(alternative) > 1){
-    stop("'alternative' must be an unambiguous abbreviation of one of the
-         following: 'two.sided', 'less', 'greater'")
-  }
+MoranI <- function(values, weights, alternative=c('two.sided', 'less', 'greater')){
+  hyptest <- match.arg(alternative)
   if(!is(weights, 'dist')){
     if (is(weights, 'matrix')){
       warning("'weights' is matrix rather than 'dist', attempting to convert...")
@@ -62,11 +58,11 @@ MoranI <- function(values, weights, alternative='two.sided'){
   }
   denom <- ifelse(retval$sd==0, 1, retval$sd)
   p <- NULL
-  if (hyptest == 1){
+  if (hyptest == "two.sided"){
     p <- 2*pnorm(abs(retval$observed - retval$expected) / denom, lower.tail=FALSE)
-  } else if (hyptest==2){
+  } else if (hyptest == "less"){
     p <- pnorm((retval$observed - retval$expected) / denom, lower.tail=TRUE)
-  } else {
+  } else { ## greater
     p <- pnorm((retval$observed - retval$expected) / denom, lower.tail=FALSE)
   }
   retval$p.value <- p

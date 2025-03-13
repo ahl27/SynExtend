@@ -24,16 +24,14 @@ See the examples for how to train your own ensemble model.
 }
 
 \examples{
-## Training own ensemble method to avoid
-## using built-ins
+## Training own ensemble method to avoid using built-ins
+## defaults to built-ins when an ensemble isn't provided
 
 exData <- get(data("ExampleStreptomycesData"))
 ew <- EvoWeaver(exData$Genes[seq_len(50L)], MySpeciesTree=exData$Tree)
 datavals <- predict(ew, NoPrediction=TRUE, Verbose=interactive())
 
-# Make sure the actual values correspond to the right pairs!
-# This example just picks random numbers
-# Do not do this for your own models
+# Picking random numbers for demonstration purposes
 actual_values <- sample(c(0,1), nrow(datavals), replace=TRUE)
 datavals[,'y'] <- actual_values
 myModel <- glm(y~., datavals[,-c(1,2)], family='binomial')

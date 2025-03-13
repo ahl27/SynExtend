@@ -32,7 +32,7 @@ coefficient of the upper triangle of the two corresponding matrices.
 
 Experimental analysis has shown data in the upper triangle is heavily
 redundant and rapidly overwhelms available system memory. Previous work
-has incorporated dimensionality reduction such as SVD to reduce the dimensionality
+has incorporated dimensionality reduction such as Singular Value Decomposition (SVD) to reduce the dimensionality
 of the data, but this prevents parallelization of the data and doesn't solve memory
 issues (since SVD takes as input the entire matrix with columns corresponding to upper triangle values). \code{EvoWeaver} instead uses a seeded random projection
 following Achlioptas (2001) to reduce the dimensionality of the data in a
@@ -48,8 +48,8 @@ The built-in \code{RPContextTree} method implements a species tree correction, a
 
 The \code{TreeDistance} method uses phylogenetic tree distance to quantify differences between gene trees. This method implements a number of metrics and groups them together to improve overall runtime. The default tree distance method is normalized Robinson-Foulds distance due to its lower computational complexity. Other methods can be specified using the \code{TreeMethods} argument, which expects a character vector containing one or more of the following:
 \itemize{
-\item \code{"CI"}: \link[=CIDist]{Clustering Information Distance}
 \item \code{"RF"}: \link[=RFDist]{Robinson-Foulds Distance}
+\item \code{"CI"}: \link[=CIDist]{Clustering Information Distance}
 \item \code{"JRF"}: \link[=JRFDist]{Jaccard-Robinson-Foulds Distance}
 \item \code{"Nye"}: \link[=JRFDist]{Nye Similarity}
 \item \code{"KF"}: \link[=KFDist]{Kuhner-Felsenstein Distance}
@@ -92,7 +92,7 @@ Sato, T., et al., \emph{Partial correlation coefficient between distance matrice
 
 \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 
 \code{\link{PhyloDistance}}
 }

@@ -22,8 +22,8 @@ regions within the genome.
 }
 
 \details{
-All distance matrix methods require a \code{EvoWeaver} object initialized
-with gene locations using the a four number code. See \code{\link{EvoWeaver}} for more information on input data types.
+All distance matrix methods require an \code{EvoWeaver} object initialized
+with gene locations using a four number code. See \code{\link{EvoWeaver}} for more information on input data types.
 
 The built-in \code{GeneDistance} examines relative location of genes within genomes
 as evidence of interaction. For a given pair of genes, the score is given by
@@ -69,5 +69,5 @@ Moran, P. A. P., \emph{Notes on Continuous Stochastic Phenomena}. Biometrika, 19
 
 \link[=EvoWeaver-PSPreds]{EvoWeaver Phylogenetic Structure Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 }

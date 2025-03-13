@@ -3,13 +3,13 @@
 \alias{JRFDist}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Jaccard-Robinson-Foulds Distance
+Jaccard-Robinson-Foulds Distance and Nye Similarity
 }
 \description{
-Calculate JRF distance between two unrooted phylogenies.
+Calculate JRF distance between two unrooted phylogenies. Nye Similarity is a special case of JRF distance, obtained when the JRF exponent \code{k} is set to 1.
 }
 \details{
-This function is called as part of \code{\link{PhyloDistance}} and calculates the Jaccard-Robinson-Foulds distance between two unrooted phylogenies. Each dendrogram is first pruned to only internal branches implying a partition in the shared leaf set; trivial partitions (where one leaf set contains 1 or 0 leaves) are ignored. 
+This function is called as part of \code{\link{PhyloDistance}} and calculates the Jaccard-Robinson-Foulds distance between two unrooted phylogenies. Each dendrogram is first pruned to only internal branches implying a partition in the shared leaf set; trivial partitions (where one leaf set contains 1 or 0 leaves) are ignored.
 
 The total score is calculated by pairing branches and scoring their similarity. For a set of two branches \eqn{A, B} that partition the leaves into \eqn{(A_1, A_2)} and \eqn{(B_1, B_2)} (resp.), the distance between the branches is calculated as:
 
@@ -17,14 +17,14 @@ The total score is calculated by pairing branches and scoring their similarity. 
 
 where \eqn{X \in (A_1, A_2),\; Y \in (B_1, B_2)} are chosen to maximize the score of the pairing, and \eqn{k} the value of \code{ExpVal}. The sum of these scores for all branches produces the overall distance between the two trees, which is then normalized by the number of branches in each tree.
 
-There are a few special cases to this distance. If \code{ExpVal=1}, the distance is equivalent to the metric introduced in Nye et al. (2006). As \code{ExpVal} approaches infinity, the value becomes close to the (non-Generalized) Robinson Foulds Distance.
+There are a few special cases to this distance. If \code{JRFExp=1}, the distance is equivalent to the metric introduced in Nye et al. (2006). As \code{JRFExp} approaches infinity, the value becomes close to the (non-Generalized) Robinson Foulds Distance.
 }
 \value{
 Returns a normalized distance, with 0 indicating identical trees and 1 indicating maximal difference.
 
 If \code{RawScore=TRUE}, returns a named length 3 vector with the first entry the summed distance score over the branch pairings, and the subsequent entries the number of partitions for each tree.
 
-If the trees have no leaves in common, the function will return \code{1} if 
+If the trees have no leaves in common, the function will return \code{1} if
 \code{RawScore=FALSE}, and \code{c(0, NA, NA)} if \code{TRUE}.
 }
 \references{
@@ -37,9 +37,9 @@ Aidan Lakshman \email{ahl27@pitt.edu}
 }
 \note{
 Note that this function requires the input dendrograms to be labeled alike (ex.
-leaf labeled \code{abc} in \code{dend1} represents the same species as 
-leaf labeled \code{abc} in \code{dend2}). 
-Labels can easily be modified using \code{\link{dendrapply}}. 
+leaf labeled \code{abc} in \code{dend1} represents the same species as
+leaf labeled \code{abc} in \code{dend2}).
+Labels can easily be modified using \code{\link{dendrapply}}.
 }
 
 \examples{

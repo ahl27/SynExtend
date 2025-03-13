@@ -5,7 +5,7 @@
 D-Statistic for Binary States on a Phylogeny
 }
 \description{
-Calculates if a presence/absence pattern is random, Brownian, or neither with respect to a given phylogeny.
+Calculates if a presence/absence pattern is random, Brownian, or neither for a binary trait with respect to a given phylogeny.
 }
 \usage{
 DPhyloStatistic(dend, PAProfile, NumIter = 1000L)
@@ -16,18 +16,18 @@ DPhyloStatistic(dend, PAProfile, NumIter = 1000L)
   An object of class \code{\link{dendrogram}}
 }
   \item{PAProfile}{
-  A vector representing presence/absence of binary traits. See Details for more information.
+  A vector representing presence/absence of binary traits. See Details for information on supported input types.
 }
   \item{NumIter}{
-  Number of iterations to simulate for random permutation analysis.
+  Integer; Number of iterations to simulate for random permutation analysis.
 }
 }
 \details{
 This function implements the D-Statistic for binary traits on a phylogeny, as introduced in Fritz and Purvis (2009). The statstic is the following ratio:
 \deqn{\frac{D_{obs} - D_b}{D_r - D_b}}
-Here \eqn{D_{obs}} is the D value for the input data, \eqn{D_b} is the value under simulated Brownian evolution, and \eqn{D_r} is the value under random permutation of the input data. The D value measures the sum of sister clade differences in a phylogeny weighted by branch lengths. A score close to 1 indicates phylogenetically random distribution, and a score close to 0 indicates the trait likely evolved under Brownian motion. Scores can fall outside this range; these scores are only intended as benchmark points on the scale. See the original paper cited in References for more information.
+Here \eqn{D_{obs}} is the D value for the input data, \eqn{D_b} is the value under simulated Brownian evolution, and \eqn{D_r} is the value under random permutation of the input data. The D value measures the sum of sister clade differences in a phylogeny weighted by branch lengths. A score close to 1 indicates phylogenetically random distribution, and a score close to 0 indicates the trait likely evolved under Brownian motion. Scores can fall outside this range; these scores are only intended as benchmark points on the scale. See the Value section or the original paper cited in References for more information.
 
-The input \code{PAProfile} supports a number of formatting options:
+The input parameter \code{PAProfile} supports a number of formatting options:
 \itemize{
   \item{Character vector, where each element is a label of the dendrogram. Presence in the character vector indicates presence of the trait in the corresponding label.}
   \item{Integer vector of length equivalent to the number of leaves, comprised of 0s and 1s. 0 indicates absence in the corresponding leaf, and 1 indicates presence.}
@@ -37,7 +37,13 @@ The input \code{PAProfile} supports a number of formatting options:
 See Examples for a demonstration of each case.
 }
 \value{
-Returns a numerical value. Values close to 0 indicate random distribution, and values close to 1 indicate a Brownian distribution.
+Returns a numerical value with the following cases:
+\itemize{
+\item{Value less than 0: the trait is more phylogenetically concentrated than expected by chance ("extremely clumped")}
+\item{Value close to 0: the trait is as phylogenetically concetrated as expected if it had evolved by Brownian motion}
+\item{Value close to 1: the trait is as phylogenetically concetrated as expected under a random distribution}
+\item{Value greater than 1: the trait is less phylogenetically concentrated than expected under a random distribution ("overdispersed")}
+}
 }
 \references{
 Fritz S.A. and Purvis A. \emph{Selectivity in Mammalian Extinction Risk and Threat Types: a New Measure of Phylogenetic Signal Strength in Binary Traits.} Conservation Biology, 2010. \bold{24}(4):1042-1051.

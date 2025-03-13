@@ -19,7 +19,7 @@ methods and algorithms. Phylogenetic Profiling (PP) methods examine conservation
 of gain/loss events within orthology groups using phylogenetic profiles
 constructed from presence/absence patterns.
 
-\code{predict.EvoWeaver} currently supports nine PP methods:
+\code{predict.EvoWeaver} currently supports ten PP methods:
 \itemize{
   \item \code{'ExtantJaccard'}
   \item \code{'Hamming'}
@@ -41,16 +41,16 @@ with any input type. See \code{\link{EvoWeaver}} for more information on input d
 When \code{Method='Ensemble'} or \code{Method="PhylogeneticProfiling"}, EvoWeaver uses
 methods \code{GLMI}, \code{GLDistance}, \code{PAJaccard}, and \code{PAOverlap}.
 
-All of these methods use presence/absence (PA) profiles, which are binary
+These methods use presence/absence (P/A) profiles, which are binary
 vectors such that 1 implies the corresponding genome has that particular
 gene, and 0 implies the genome does not have that particular gene.
 
 Methods \code{Hamming} and \code{ExtantJaccard} use Hamming and Jaccard distance
-(respectively) of PA profiles to determine overall score.
+(respectively) of P/A profiles to determine overall score.
 
 \code{GLMI} uses mutual information of gain/loss (G/L) vectors to determine
 score, employing a weighting scheme such that concordant gains/losses give positive information,
-discordant gains/losses give negative information, and events that do not cooccur with a gain/loss
+discordant gains/losses give negative information, and events that do not co-occur with a gain/loss
 in the other gene group give no information.
 
 \code{PAJaccard} calculates the centered Jaccard index of P/A profiles, where each clade
@@ -60,11 +60,11 @@ with identical extant patterns is collapsed to a single leaf.
 relative to the total time each individual gene occurs, based on ancestral states inferred
 with Fitch parsimony.
 
-\code{PAPV} calculates a p-value for PA profiles using Fisher's Exact Test. The returned score is provided as \code{1-p_value} so that larger scores indicate more significance, and smaller scores indicate less significance. This rescaling is consistent with the other similarity metrics in \code{EvoWeaver}. This can be used with \code{ExtantJaccard}, \code{Hamming}, or \code{GLMI} to weight raw scores by statistical significance.
+\code{PAPV} calculates a p-value for P/A profiles using Fisher's Exact Test. The returned score is provided as \code{1-p_value} so that larger scores indicate more significance, and smaller scores indicate less significance. This rescaling is consistent with the other similarity metrics in \code{EvoWeaver}. This can be used with \code{ExtantJaccard}, \code{Hamming}, or \code{GLMI} to weight raw scores by statistical significance.
 
 \code{ProfDCA} uses the direct coupling analysis algorithm introduced by
-Weigt et al. (2005) to determine direct information between PA profiles.
-This approach has been validated on PA profiles in Fukunaga and Iwasaki (2022),
+Weigt et al. (2005) to determine direct information between P/A profiles.
+This approach has been validated on P/A profiles in Fukunaga and Iwasaki (2022),
 though the implementation in \code{EvoWeaver} forsakes the persistent contrasive divergence method in favor of the the algorithm from
 Lokhov et al. (2018) for increased speed and exact solutions. Note that this algorithm is still extremely slow relative to the other methods despite the aforementioned runtime improvements.
 
@@ -114,5 +114,5 @@ Weigt, M., et al., \emph{Identification of direct residue contacts in protein-pr
 
 \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 }

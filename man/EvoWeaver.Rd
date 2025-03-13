@@ -5,7 +5,7 @@
 \alias{SpeciesTree}
 \alias{SpeciesTree.EvoWeaver}
 \title{
-EvoWeaver: Predicting Protein Functional Association Networks
+EvoWeaver: Identifying Gene Functional Associations from Coevolutionary Signals
 }
 \description{
 EvoWeaver is an S3 class with methods for predicting functional association using
@@ -27,27 +27,27 @@ An object of class \code{'dendrogram'} representing the overall species tree for
 the list provided in \code{ListOfData}.
 }
 \item{NoWarn}{
-Several algorithms depend on having certain data. When a \code{EvoWeaver} object is initialized, it automatically selects which algorithms can be used given the input data. By default, EvoWeaver will notify the user of algorithms that cannot be used with warnings. Setting \code{NoWarn=TRUE} will suppress these messages.
+Logical; If \code{FALSE}, displays warnings corresponding to which algorithms are unavailable for given input data format (see Details for more information).
 }
 \item{ew}{
-An object of class \code{EvoWeaver}
+An object of class \code{EvoWeaver}.
 }
 \item{Verbose}{
-Should output be displayed when calculating species tree?
+Logical; If \code{TRUE}, displays output when calculating species tree.
 }
 \item{Processors}{
-Number of processors to use. Set to \code{NULL} to automatically use the maximum
+Integer; The number of processors to use. Set to \code{NULL} to automatically use the maximum
 amount of processors.
 }
 }
 \details{
-EvoWeaver expects input data to be a list. All entries must be one of the following:
+EvoWeaver expects input data to be a list. All entries must be one of the following cases:
 \enumerate{
   \item{
     \code{ListOfData[[i]] = c('ID#1', 'ID#2', ..., 'ID#k')}
   }
   \item{
-    \code{ListOfData[[i]] = c('i1_d1_s1_p1', 'i2_d2_s2_p2', ..., 'ik_dk_sk_pk') }}
+    \code{ListOfData[[i]] = c('g1_d1_s1_p1', 'g2_d2_s2_p2', ..., 'gk_dk_sk_pk') }}
 
   \item{
   \code{ListOfData[[i]] = dendrogram(...)}
@@ -55,7 +55,7 @@ EvoWeaver expects input data to be a list. All entries must be one of the follow
 }
 In (1), each ID#i corresponds to the unique identifier for genome #i. For entry #j in the list, the presence of 'ID#i' means genome #i has an ortholog for gene/protein #j.
 
-Case (2) is the same as (1), just with the formatting of names slightly different. Each entry is of the form \code{i_d_p}, where \code{i} is the unique identifier for the genome, \code{d} is which chromosome the ortholog is located, \code{s} indicates whether the gene is on the forward or reverse strand, and \code{p} is what position the ortholog appears in on that chromosome. \code{p} must be a \code{numeric}. \code{s} must be \code{0} or \code{1}, corresponding to whether the gene is on the forward or reverse strand. Whether \code{0} denotes forward or reverse is inconsequential as long as the scheme is consistent. \code{i,d} can be any value as long as it doesn't contain an underscore (\code{'_'}).
+Case (2) is the same as (1), just with the formatting of names slightly different. Each entry is of the form \code{g_d_p}, where \code{g} is the unique identifier for the genome, \code{d} is which chromosome the ortholog is located, \code{s} indicates whether the gene is on the forward or reverse strand, and \code{p} is what position the ortholog appears in on that chromosome. \code{p} must be a \code{numeric}. \code{s} must be \code{0} or \code{1}, corresponding to whether the gene is on the forward or reverse strand. Whether \code{0} denotes forward or reverse is inconsequential as long as the scheme is consistent. \code{g,d} can be any value as long as they don't contain an underscore (\code{'_'}).
 
 Case (3) expects gene trees for each gene, with labeled leaves corresponding to each source genome. If \code{ListOfData} is in this format, taking \code{labels(ListOfData[[i]])} should produce a character vector that matches the format of one of the previous cases.
 
@@ -63,7 +63,7 @@ Case (3) expects gene trees for each gene, with labeled leaves corresponding to 
 
 \emph{Whenever possible, provide a full set of \code{dendrogram} objects with leaf labels in form (2). This will allow the most algorithms to run. What follows is a more detailed description of which inputs allow which algorithms.}
 
-EvoWeaver requires input of scenario (3) to use distance matrix methods, and requires input of scenario (2) (or (3) with leaves labeled according to (2)) for gene organization analyses. Sequence-level methods require dendrograms with sequence information included as the \code{state} attribute in each leaf node.
+EvoWeaver requires input of scenario (3) to use distance matrix methods, and requires input of scenario (2) (or (3) with leaves labeled according to (2)) for gene organization analyses. Sequence Level methods require dendrograms with sequence information included as the \code{state} attribute in each leaf node.
 
 Note that ALL entries must belong to the same category--a combination of character vectors and dendrograms is not allowed.
 
