@@ -92,7 +92,7 @@ Sato, T., et al., \emph{Partial correlation coefficient between distance matrice
 
 \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 
 \code{\link{PhyloDistance}}
 }

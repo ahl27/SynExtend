@@ -63,7 +63,7 @@ Case (3) expects gene trees for each gene, with labeled leaves corresponding to 
 
 \emph{Whenever possible, provide a full set of \code{dendrogram} objects with leaf labels in form (2). This will allow the most algorithms to run. What follows is a more detailed description of which inputs allow which algorithms.}
 
-EvoWeaver requires input of scenario (3) to use distance matrix methods, and requires input of scenario (2) (or (3) with leaves labeled according to (2)) for gene organization analyses. Sequence-level methods require dendrograms with sequence information included as the \code{state} attribute in each leaf node.
+EvoWeaver requires input of scenario (3) to use distance matrix methods, and requires input of scenario (2) (or (3) with leaves labeled according to (2)) for gene organization analyses. Sequence Level methods require dendrograms with sequence information included as the \code{state} attribute in each leaf node.
 
 Note that ALL entries must belong to the same category--a combination of character vectors and dendrograms is not allowed.
 

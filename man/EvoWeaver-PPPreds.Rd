@@ -60,11 +60,11 @@ with identical extant patterns is collapsed to a single leaf.
 relative to the total time each individual gene occurs, based on ancestral states inferred
 with Fitch parsimony.
 
-\code{PAPV} calculates a p-value for PA profiles using Fisher's Exact Test. The returned score is provided as \code{1-p_value} so that larger scores indicate more significance, and smaller scores indicate less significance. This rescaling is consistent with the other similarity metrics in \code{EvoWeaver}. This can be used with \code{ExtantJaccard}, \code{Hamming}, or \code{GLMI} to weight raw scores by statistical significance.
+\code{PAPV} calculates a p-value for P/A profiles using Fisher's Exact Test. The returned score is provided as \code{1-p_value} so that larger scores indicate more significance, and smaller scores indicate less significance. This rescaling is consistent with the other similarity metrics in \code{EvoWeaver}. This can be used with \code{ExtantJaccard}, \code{Hamming}, or \code{GLMI} to weight raw scores by statistical significance.
 
 \code{ProfDCA} uses the direct coupling analysis algorithm introduced by
-Weigt et al. (2005) to determine direct information between PA profiles.
-This approach has been validated on PA profiles in Fukunaga and Iwasaki (2022),
+Weigt et al. (2005) to determine direct information between P/A profiles.
+This approach has been validated on P/A profiles in Fukunaga and Iwasaki (2022),
 though the implementation in \code{EvoWeaver} forsakes the persistent contrasive divergence method in favor of the the algorithm from
 Lokhov et al. (2018) for increased speed and exact solutions. Note that this algorithm is still extremely slow relative to the other methods despite the aforementioned runtime improvements.
 
@@ -114,5 +114,5 @@ Weigt, M., et al., \emph{Identification of direct residue contacts in protein-pr
 
 \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 }

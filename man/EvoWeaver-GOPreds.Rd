@@ -69,5 +69,5 @@ Moran, P. A. P., \emph{Notes on Continuous Stochastic Phenomena}. Biometrika, 19
 
 \link[=EvoWeaver-PSPreds]{EvoWeaver Phylogenetic Structure Predictors}
 
-\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence-Level Predictors}
+\link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Predictors}
 }
