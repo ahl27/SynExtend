@@ -1505,7 +1505,7 @@ static void update_node_cluster(l_uint ind,
 
 
   // figure out the cluster to update to
-  double max_weight, cur_weight=0, cur_error=0;
+  double max_weight=0, cur_weight=0, cur_error=0;
   l_uint max_clust=0, cur_clust=neighbors[num_edges]->count;
   dist_uint new_dist = -1, min_dist = -1; // type defined in PrefixTrie.h
   leaf* cur_neighbor;
@@ -1527,12 +1527,17 @@ static void update_node_cluster(l_uint ind,
       min_dist = min_dist > cur_neighbor->dist ? cur_neighbor->dist : min_dist;
     }
   }
-
-  if(max_weight < cur_weight || max_clust == 0){
-    // max_clust == 0 case is for when the node has no edges,
-    // which would skip the above loop and assign the node to 0 (invalid)
+  if(max_weight < cur_weight){
     max_weight = cur_weight;
     max_clust = cur_clust;
+    new_dist = min_dist;
+  }
+  if(max_clust == 0){
+    // max_clust == 0 case is for when the node has no edges,
+    // which would skip the above loop and assign the node to 0 (invalid)
+    // we could also never update it because all weights are negative
+    // (due to attenuation)
+    max_clust = neighbors[num_edges]->count;
   }
 
   // have to actually write the new cluster and add changed nodes
