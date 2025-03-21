@@ -15,13 +15,13 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   } else {
     iterations <- as.integer(iterations)
   }
-  if(iterations > 2^15){
+  if(any(iterations > 2^15)){
     warning("'iterations' currently only supports signed 16-bit numbers, defaulting to max possible value of 32767.")
-    iterations <- 32767L
+    iterations[iterations > 2^15] <- 32767L
   }
-  if(is.na(iterations) || is.null(iterations) || is.infinite(iterations) || iterations < 0){
+  if(any(is.na(iterations) | is.null(iterations) | is.infinite(iterations) | iterations < 0)){
     warning("Invalid value of 'iterations', will determine automatically from node degree.")
-    iterations <- 0L
+    iterations[is.na(iterations) | is.null(iterations) | is.infinite(iterations) | iterations < 0] <- 0L
   }
   if(!is.numeric(add_self_loops) && !is.logical(add_self_loops)){
     stop("value of 'add_self_loops' should be numeric or logical")
@@ -63,10 +63,14 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
   if(length(attenuation) == 1){
     attenuation <- rep(attenuation, length(outfile))
   }
-  if(length(outfile) != length(add_self_loops) ||
-     length(attenuation) != length(add_self_loops)){
-      stop("If more than one outfile is provided, 'add_self_loops' and ",
-          "'attenuation' must be either the same length as 'outfile' ",
+  if(length(iterations) == 1){
+    iterations <- rep(iterations, length(outfile))
+  }
+  if(length(add_self_loops) != length(outfile) ||
+     length(attenuation) != length(outfile) ||
+     length(iterations) != length(outfile)){
+      stop("If more than one outfile is provided, 'add_self_loops', 'iterations'",
+          ", and 'attenuation' must be either the same length as 'outfile' ",
           "or length 1.")
   }
   if(!is.logical(verbose) || !is.numeric(verbose)){

@@ -1972,7 +1972,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   // required parameters
   const char* seps = CHAR(STRING_ELT(SEPS, 0));
   const int num_edgefiles = INTEGER(NUM_EFILES)[0];
-  aq_int num_iter = INTEGER(ITER)[0];
+  int* num_iter = INTEGER(ITER);
+  aq_int base_iter = 0;
   const int verbose = INTEGER(VERBOSE)[0];
   l_uint num_v = 0;
 
@@ -2015,18 +2016,26 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   fclose_tracked(1);
 
   if(verbose >= VERBOSE_BASIC) Rprintf("\tFound %" lu_fprint " unique vertices!\n", num_v);
-  if(!num_iter){
-    // + 2 is to add an extra in case there are self loops
-    // may have an extra, but like at the end of the day, it's one extra degree
-    // not a huge deal
-    max_degree = (l_uint)(sqrt((double)max_degree)) + 2;
-    //max_degree += 2;
-    size_t num_bits = sizeof(aq_int) * 8 - 1; // signed, so we have one less bit to work with
-    num_iter = ((aq_int)(1)) << num_bits;
-    num_iter = num_iter > max_degree ? max_degree : num_iter;
-    num_iter = num_iter < 5 ? 5 : num_iter; // minimum of 5 iterations per node
-    if(verbose >= VERBOSE_BASIC) Rprintf("\tAutomatically setting iterations to %d\n", num_iter);
+
+  // get base number of iterations
+  // + 2 is to add an extra in case there are self loops
+  // may have an extra, but like at the end of the day, it's one extra degree
+  // not a huge deal
+  max_degree = (l_uint)(sqrt((double)max_degree)) + 2;
+  size_t num_bits = sizeof(aq_int) * 8 - 1; // signed, so we have one less bit to work with
+  base_iter = ((aq_int)(1)) << num_bits;
+  base_iter = base_iter > max_degree ? max_degree : base_iter;
+  base_iter = base_iter < 5 ? 5 : base_iter; // minimum of 5 iterations per node
+  int filled_iter = 0;
+
+  for(int i=0; i<num_ofiles; i++){
+    if(num_iter[i] == 0){
+      num_iter[i] = base_iter;
+      filled_iter = 1;
+    }
   }
+  if(filled_iter && verbose >= VERBOSE_BASIC)
+    Rprintf("\tAutomatically setting zero-value iterations to %d\n", base_iter);
 
   // next, create an indexed table file of where data for each vertex will be located
   if(verbose >= VERBOSE_BASIC) Rprintf("Reformatting vertex degree file...\n");
@@ -2077,12 +2086,12 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     time1 = clock();
     if(consensus_len){
       consensus_cluster_oom(tabfile, weightsfile, neighborfile, dir, num_v,
-                            num_iter, verbose, self_loop_weights[i], atten_power[i],
+                            num_iter[i], verbose, self_loop_weights[i], atten_power[i],
                             consensus_w, consensus_len);
 
     } else {
       if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
-      cluster_file(tabfile, weightsfile, neighborfile, num_v, num_iter, verbose,
+      cluster_file(tabfile, weightsfile, neighborfile, num_v, num_iter[i], verbose,
                     self_loop_weights[i], atten_power[i]);
     }
     time2 = clock();
