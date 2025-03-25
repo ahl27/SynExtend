@@ -285,13 +285,12 @@ static ArrayQueue* init_array_queue(l_uint size, int max_seen){
 /* Output Functions */
 /********************/
 
-static void report_time(clock_t start, clock_t end, const char* prefix){
-  double elapsed_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-  double secs;
-  int mins, hours, days;
-  secs = fmod(elapsed_time, 60);
+static void report_time(time_t time1, time_t time2, const char* prefix){
+  double elapsed_time = difftime(time2, time1);//((double)(end - start)) / CLOCKS_PER_SEC;
+  int mins, hours, days, secs;
+  secs = (int)fmod(elapsed_time, 60);
 
-  int elapsed_secs = (int)(elapsed_time - secs);
+  l_uint elapsed_secs = (l_uint)(elapsed_time - secs);
   days = elapsed_secs / 86400;
   elapsed_secs %= 86400;
 
@@ -304,8 +303,7 @@ static void report_time(clock_t start, clock_t end, const char* prefix){
   if(days) Rprintf("%d days, ", days);
   if(hours) Rprintf("%d hrs, ", hours);
   if(mins) Rprintf("%d mins, ", mins);
-  if(mins) Rprintf("%d secs\n", (int)secs);
-  else Rprintf("%0.2f secs\n", secs);
+  Rprintf("%d secs\n", secs);
   return;
 }
 
@@ -1989,17 +1987,17 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const double* consensus_w = REAL(CONSENSUS_WEIGHTS);
 
   // timing
-  clock_t time1, time2;
+  time_t time1, time2;
 
   // first hash all vertex names
-  time1 = clock();
+  time1 = time(NULL);
   if(verbose >= VERBOSE_BASIC) Rprintf("Building trie for vertex names...\n");
   for(int i=0; i<num_edgefiles; i++){
     edgefile = CHAR(STRING_ELT(FILENAME, i));
     num_v = hash_file_vnames_trie(edgefile, GLOBAL_trie, num_v, seps[0], seps[1],
                                   verbose, is_undirected, ignore_weights);
   }
-  time2 = clock();
+  time2 = time(NULL);
   if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
 
   // allocate space for leaf counters
@@ -2042,7 +2040,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   reformat_counts(temptabfile, tabfile, num_v);
 
   // then, we'll create the CSR compression of all our edges
-  time1 = clock();
+  time1 = time(NULL);
   if(verbose >= VERBOSE_BASIC) Rprintf("Reading in edges...\n");
   l_uint num_edges = 0;
   for(int i=0; i<num_edgefiles; i++){
@@ -2074,7 +2072,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     }
   }
   split_sorted_file(neighborfile, weightsfile, num_edges, verbose);
-  time2 = clock();
+  time2 = time(NULL);
   //check_mergedsplit_file(neighborfile, weightsfile);
 
   if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
@@ -2083,7 +2081,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   char write_buffer[PATH_MAX];
   for(int i=0; i<num_ofiles; i++){
     reset_trie_clusters(num_v);
-    time1 = clock();
+    time1 = time(NULL);
     if(consensus_len){
       consensus_cluster_oom(tabfile, weightsfile, neighborfile, dir, num_v,
                             num_iter[i], verbose, self_loop_weights[i], atten_power[i],
@@ -2094,7 +2092,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
       cluster_file(tabfile, weightsfile, neighborfile, num_v, num_iter[i], verbose,
                     self_loop_weights[i], atten_power[i]);
     }
-    time2 = clock();
+    time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
 
     // have to allocate resources for writing out

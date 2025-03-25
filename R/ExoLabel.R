@@ -6,10 +6,11 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           iterations=0L,
                           return_table=FALSE,
                           consensus_cluster=FALSE,
-                          use_fast_sort=FALSE,
+                          use_fast_sort=TRUE,
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
+  ## TODO: auto-select enough tempfiles if return_table=FALSE
   if(!is.numeric(iterations)){
     stop("'iterations' must be an integer or numeric.")
   } else {

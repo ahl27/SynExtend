@@ -17,7 +17,7 @@ ExoLabel(edgelistfiles,
               iterations=0L,
               return_table=FALSE,
               consensus_cluster=FALSE,
-              use_fast_sort=FALSE,
+              use_fast_sort=TRUE,
               verbose=interactive(),
               sep='\t',
               tempfiledir=tempdir())
@@ -61,7 +61,7 @@ Logical or Numeric; Determines if consensus clustering should be used. If \code{
 }
 
 \item{use_fast_sort}{
-Logical; Determines how files should be sorted. If \code{FALSE}, ExoLabel will perform file sorting functions in-place. If \code{TRUE}, ExoLabel will perform its file sorting functions using a second temporary file. This is much faster than the in-place sort, but consumes twice the amount of disk space. The relative disk consumption is about the same size as the input graph for \code{use_fast_sort=FALSE}, and about double the size of the input graph for \code{use_fast_sort=TRUE} (see "Memory Consumption" and the last paragraph of "Warning" below). Set to \code{TRUE} if you're not worried about disk utilization.
+Logical; Determines how files should be sorted. If \code{FALSE}, ExoLabel will perform file sorting functions in-place. If \code{TRUE}, ExoLabel will perform its file sorting functions using a second temporary file. This is much faster than the in-place sort, but consumes twice the amount of disk space. The relative disk consumption is about the same size as the input graph for \code{use_fast_sort=FALSE}, and about double the size of the input graph for \code{use_fast_sort=TRUE} (see "Memory Consumption" and the last paragraph of "Warning" below). Set to \code{FALSE} if you're worried about disk utilization.
 }
 
 \item{verbose}{
