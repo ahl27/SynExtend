@@ -286,7 +286,7 @@ static ArrayQueue* init_array_queue(l_uint size, int max_seen){
 /********************/
 
 static void report_time(time_t time1, time_t time2, const char* prefix){
-  double elapsed_time = difftime(time2, time1);//((double)(end - start)) / CLOCKS_PER_SEC;
+  double elapsed_time = difftime(time2, time1);
   int mins, hours, days, secs;
   secs = (int)fmod(elapsed_time, 60);
 
