@@ -198,7 +198,6 @@ static void **GLOBAL_mergebuffers = NULL;
 static LoserTree *GLOBAL_mergetree = NULL;
 static double GLOBAL_max_weight = 1.0;
 static l_uint GLOBAL_verts_changed = 0;
-static float GLOBAL_atten_user_power = 1.0;
 
 /***************************/
 /* Struct Helper Functions */
@@ -1489,7 +1488,7 @@ static void update_node_cluster(l_uint ind,
     // attenuate edges, using adaptive scaling
     // see https://doi.org/10.1103/PhysRevE.83.036103, eqns 4-5
     weights_arr[i] *= 1-(atten_param * neighbors[i]->dist);
-    if(weights_arr[i] < CLUSTER_MIN_WEIGHT) weights_arr[i] = 0;
+    if(fabs(weights_arr[i]) < CLUSTER_MIN_WEIGHT) weights_arr[i] = 0;
   }
   free(clusts);
 
@@ -1606,7 +1605,7 @@ static void cluster_file(const char* offsets_fname, const char* weights_fname,
       if(atten_pow == 0){
         atten_param = 0;
       } else if (atten_pow != 1){
-        atten_param = pow(atten_param, GLOBAL_atten_user_power);
+        atten_param = pow(atten_param, atten_pow);
       }
       iteration_length = GLOBAL_queue->length;
       GLOBAL_verts_changed = 0;
