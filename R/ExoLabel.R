@@ -1,4 +1,5 @@
-ExoLabel <- function(edgelistfiles, outfile=tempfile(),
+ExoLabel <- function(edgelistfiles,
+                          outfile=tempfile(tmpdir=tempfiledir),
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
                           attenuation=TRUE,
@@ -10,7 +11,17 @@ ExoLabel <- function(edgelistfiles, outfile=tempfile(),
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  ## TODO: auto-select enough tempfiles if return_table=FALSE
+  if(return_table){
+    maxp <- max(length(add_self_loops),
+                length(attenuation),
+                length(iterations))
+    if(!missing(outfile)){
+      warning("'outfile' will be ignored since return_table=TRUE")
+    }
+    if(length(outfile) != maxp){
+      outfile <- replicate(maxp, tempfile(tmpdir=tempfiledir))
+    }
+  }
   if(!is.numeric(iterations)){
     stop("'iterations' must be an integer or numeric.")
   } else {

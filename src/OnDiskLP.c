@@ -919,9 +919,8 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
                       tmpniter, nmax_iterations, cur_progress);
     report_filesize(max_fsize);
-    Rprintf(")  \r");
-  } else {}
-  R_CheckUserInterrupt();
+    Rprintf(")  \n");
+  }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
 
