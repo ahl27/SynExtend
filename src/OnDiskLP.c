@@ -1194,7 +1194,7 @@ static h_uint hash_file_vnames_trie(const char* fname, prefix *trie, h_uint next
   return next_index;
 }
 
-static l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile,
+static l_uint reindex_trie_and_write_counts(prefix *trie,
                                             l_uint max_seen, int verbose,
                                             l_uint* nseen){
   // Vertices are 0-indexed
@@ -1212,8 +1212,7 @@ static l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile,
     // save the maximum degree we observe
     max_seen = max_seen > l->count ? max_seen : l->count;
 
-    fseek(csrfile, cur_index*L_SIZE, SEEK_SET);
-    safe_fwrite(&(l->count), L_SIZE, 1, csrfile);
+    l->edge_start = l->count; // will handle this later
 
     // set count (cluster) to index+1
     l->count = cur_index+1;
@@ -1224,7 +1223,7 @@ static l_uint reindex_trie_and_write_counts(prefix *trie, FILE* csrfile,
     }
   }
   while(ctr < bits_remaining)
-    max_seen = reindex_trie_and_write_counts(trie->child_nodes[ctr++], csrfile,
+    max_seen = reindex_trie_and_write_counts(trie->child_nodes[ctr++],
                                               max_seen, verbose, nseen);
 
   return max_seen;
@@ -1243,33 +1242,8 @@ static void reset_trie_clusters(l_uint num_v){
   return;
 }
 
-static void reformat_counts(const char* curcounts, const char* mastertable, l_uint n_vert){
-  /*
-   * Creates a new table with cumulative counts
-   * leaves the old table unchanged, this will act as a temporary counts file later
-   */
-  const uint l_size = L_SIZE;
-  l_uint cumul_total = 0, curcount;
-  FILE *tmptab = safe_fopen(curcounts, "rb");
-  FILE *mtab = safe_fopen(mastertable, "wb+");
-  for(l_uint i=0; i<n_vert; i++){
-
-    safe_fwrite(&cumul_total, l_size, 1, mtab);
-    safe_fread(&curcount, l_size, 1, tmptab);
-    cumul_total += curcount;
-
-    // also write this information to the leaves to optimize writing edges later
-    GLOBAL_all_leaves[i]->count = cumul_total; // end of block for this vertex
-  }
-
-  // ending position of file
-  safe_fwrite(&cumul_total, l_size, 1, mtab);
-  fclose_tracked(2);
-  return;
-}
-
 static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *trie,
-                                  const char* ftable, const char* fweight, const char* fneighbor,
+                                  const char* fweight, const char* fneighbor,
                                   const char sep, const char linesep, l_uint num_v, int v,
                                   const int is_undirected,
                                   const int ignore_weights, const int sort_inplace){
@@ -1281,7 +1255,6 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
    * Error checking can be reduced because we would have caught it earlier
    *
    * File inputs:
-   *  ftable: offsets file
    *  fweight: file where edge weights will be written
    *  fneighbors: file where edge end nodes will be written
    *
@@ -1309,14 +1282,7 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
   vname = safe_malloc(MAX_NODE_NAME_SIZE);
   edges = safe_malloc(FILE_READ_CACHE_SIZE * sizeof(edge));
 
-  FILE *offsetstable, *edgelist, *neighbortable;
-  offsetstable = safe_fopen(ftable, "rb+");
-  if(!offsetstable){
-    fclose_tracked(1); // handling for NULL is done in this function
-    offsetstable = safe_fopen(ftable, "ab+");
-    fclose_tracked(1);
-    offsetstable = safe_fopen(ftable, "rb+");
-  }
+  FILE *edgelist, *neighbortable;
   edgelist = safe_fopen(edgefile, "rb");
 
   // open neighbors table
@@ -1394,7 +1360,7 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
   }
 
   if(v >= VERBOSE_BASIC) Rprintf("\t%" lu_fprint " edges read\n", print_counter);
-  fclose_tracked(3);
+  fclose_tracked(2);
   free(edges);
   free(vname);
   free(read_cache);
@@ -1434,7 +1400,7 @@ static void add_remaining_to_queue(l_uint new_clust, leaf **neighbors,
 
 static void update_node_cluster(l_uint ind,
                           float self_loop_weight,
-                          FILE *offsets, FILE *weightsfile, FILE *neighborfile,
+                          FILE *weightsfile, FILE *neighborfile,
                           ArrayQueue *queue, float atten_param){
   /*
    * Determine number of edges using the table file (next - cur)
@@ -1453,29 +1419,23 @@ static void update_node_cluster(l_uint ind,
   R_CheckUserInterrupt();
   l_uint start, end, num_edges;
   w_float *weights_arr;
-  l_uint *clusts;
   l_uint *indices;
   char *sufficient_weight;
   leaf **neighbors;
   leaf* original_node = GLOBAL_all_leaves[ind];
   l_uint original_cluster = original_node->count;
 
-  // move to information for the vertex and read in number of edges
-  // TODO: can we put this in the trie?
-  //        would have to have an extra value so we could get start/end
-  //        from leaves[ind] and leaves[ind+1]
-  fseek(offsets, L_SIZE*ind, SEEK_SET);
-  safe_fread(&start, L_SIZE, 1, offsets);
-  safe_fread(&end, L_SIZE, 1, offsets);
+  // get the number of edges
+  start = GLOBAL_all_leaves[ind]->edge_start;
+  end = GLOBAL_all_leaves[ind+1]->edge_start;
 
   num_edges = end - start;
   // if it has no edges we can't do anything
   if(!num_edges) return;
 
 
-  // adding in an extra space for the self loop (even if it's zero!)
   weights_arr = safe_malloc(W_SIZE*(num_edges));
-  clusts = safe_malloc(L_SIZE*(num_edges));
+  indices = safe_malloc(L_SIZE*(num_edges));
   neighbors = safe_malloc(sizeof(leaf*)*(num_edges));
   sufficient_weight = safe_malloc(num_edges);
 
@@ -1484,16 +1444,12 @@ static void update_node_cluster(l_uint ind,
   fseek(neighborfile, start*L_SIZE, SEEK_SET);
 
   // these are the indexes and weights of the neighbors
-  safe_fread(clusts, L_SIZE, num_edges, neighborfile);
+  safe_fread(indices, L_SIZE, num_edges, neighborfile);
   safe_fread(weights_arr, W_SIZE, num_edges, weightsfile);
-
-  // add in the self loop
-  //clusts[num_edges] = ind;
-  //weights_arr[num_edges] = self_loop_weight;
 
   // read in the clusters
   for(l_uint i=0; i<num_edges; i++){
-    neighbors[i] = GLOBAL_all_leaves[clusts[i]];
+    neighbors[i] = GLOBAL_all_leaves[indices[i]];
     // attenuate edges, using adaptive scaling
     // see https://doi.org/10.1103/PhysRevE.83.036103, eqns 4-5
     sufficient_weight[i] = weights_arr[i] >= self_loop_weight;
@@ -1503,8 +1459,6 @@ static void update_node_cluster(l_uint ind,
 
   // sort both leaves and weights by assigned cluster
   // note that this just sorts the indexes vector, not the array itself
-  // we can just reuse clusts here
-  indices = clusts;
   for(l_uint i=0; i<num_edges; i++) indices[i] = i;
   GLOBAL_leaf = neighbors;
   qsort(indices, num_edges, L_SIZE, leaf_index_compar);
@@ -1548,7 +1502,6 @@ static void update_node_cluster(l_uint ind,
     // which would skip the above loop and assign the node to 0 (invalid),
     // or if we never update it because all weights are negative
     // (due to attenuation), or if none are larger than self-loop
-    //max_clust = neighbors[num_edges]->count;
     max_clust = original_cluster;
   }
   free(sufficient_weight);
@@ -1557,7 +1510,6 @@ static void update_node_cluster(l_uint ind,
   // only need to do this if it's changed, though
   if(max_clust != original_cluster){
     GLOBAL_verts_changed++;
-    //neighbors[num_edges]->count = max_clust;
     original_node->count = max_clust;
     // increment while handling overflow
     new_dist = new_dist+1 ? new_dist+1 : new_dist;
@@ -1571,14 +1523,13 @@ static void update_node_cluster(l_uint ind,
   return;
 }
 
-static void cluster_file(const char* offsets_fname, const char* weights_fname,
+static void cluster_file(const char* weights_fname,
                           const char* neighbor_fname,
                           const l_uint num_v, const int max_iterations, const int v,
                           const float self_loop_weight, const double atten_pow){
   GLOBAL_verts_remaining = num_v;
 
   // main runner function to cluster nodes
-  FILE *offsetsfile = safe_fopen(offsets_fname, "rb");
   FILE *weightsfile = safe_fopen(weights_fname, "rb+");
   FILE *neighborfile = safe_fopen(neighbor_fname, "rb");
 
@@ -1649,7 +1600,7 @@ static void cluster_file(const char* offsets_fname, const char* weights_fname,
     aq_int num_seen = -1*GLOBAL_queue->seen[next_vert];
     if(!num_seen) num_seen = max_iterations;
     update_node_cluster(next_vert, self_loop_weight,
-                        offsetsfile, weightsfile, neighborfile,
+                        weightsfile, neighborfile,
                         GLOBAL_queue, atten_param);
   }
   if(v >= VERBOSE_BASIC){
@@ -1661,17 +1612,16 @@ static void cluster_file(const char* offsets_fname, const char* weights_fname,
   }
   free_array_queue(GLOBAL_queue);
   GLOBAL_queue = NULL;
-  fclose_tracked(3);
+  fclose_tracked(2);
 
   return;
 }
 
-static void resolve_cluster_consensus(const char* clusters, const char* csrheader,
+static void resolve_cluster_consensus(const char* clusters,
                                       const char* weightsfile, const char* neighborfile,
                                       l_uint num_v, int num_runs){
   // overwrite the files with new info
   FILE *clusts = safe_fopen(clusters, "rb");
-  FILE *offsets = safe_fopen(csrheader, "wb+");
 
   l_uint *read_clusts = safe_malloc(L_SIZE*num_v);
   l_uint *counts = safe_malloc(L_SIZE*num_v);
@@ -1697,19 +1647,13 @@ static void resolve_cluster_consensus(const char* clusters, const char* csrheade
   // convert to cumulative counts
   tmp = 0;
   for(l_uint i=0; i<num_v; i++){
+    GLOBAL_all_leaves[i]->edge_start = tmp;
     tmp += counts[i];
-    tmp_space[i] = tmp;
   }
   total_edges = tmp;
 
   // write cumulative counts to file
   l_uint cur_clust, tmp_ind, num_neighbors;
-  tmp = 0;
-  safe_fwrite(&tmp, L_SIZE, 1, offsets);
-  safe_fwrite(tmp_space, L_SIZE, num_v, offsets);
-
-  // write the edges
-  rewind(clusts);
   FILE *neighbors = safe_fopen(neighborfile, "wb+");
 
   // having fwrite problems, I'm going to just set up the file in advance
@@ -1753,9 +1697,7 @@ static void resolve_cluster_consensus(const char* clusters, const char* csrheade
 
         // write all the neighbors to the file
         cur_clust = tmp_space[0];
-
-        fseek(offsets, cur_clust*L_SIZE, SEEK_SET);
-        safe_fread(&tmp_ind, L_SIZE, 1, offsets);
+        tmp_ind = GLOBAL_all_leaves[cur_clust]->edge_start;
 
         // decrement counts first
         counts[cur_clust] -= num_neighbors;
@@ -1780,20 +1722,18 @@ static void resolve_cluster_consensus(const char* clusters, const char* csrheade
   w_float *w = safe_malloc(W_SIZE*FILE_READ_CACHE_SIZE);
   for(int i=0; i<FILE_READ_CACHE_SIZE; i++)
     w[i] = 1.0;
-  fseek(offsets, num_v*L_SIZE, SEEK_SET);
-  safe_fread(&tmp_ind, L_SIZE, 1, offsets); // total number of edges
   while(total_edges){
     tmp = FILE_READ_CACHE_SIZE > total_edges ? total_edges : FILE_READ_CACHE_SIZE;
     safe_fwrite(w, W_SIZE, tmp, weights);
     total_edges -= tmp;
   }
   free(w);
-  fclose_tracked(3);
+  fclose_tracked(2);
 
   return;
 }
 
-static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
+static void consensus_cluster_oom(const char* weightsfile,
                             const char* neighborfile, const char* dir,
                             const l_uint num_v, const int num_iter, const int v,
                             const float self_loop_weight, const double atten_pow,
@@ -1801,7 +1741,6 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
 
   /*
    * Inputs:
-   *  - csrfile: file of offsets (read-only)
    *  - weightsfile: weights of each edge
    *  - neighborfile: neighbors of each edge
    *
@@ -1818,11 +1757,7 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
   FILE *dummyclust;
 
   // need to get the total number of edges
-  l_uint num_edges = 0;
-  FILE *csr = safe_fopen(csrfile, "rb");
-  fseek(csr, -1*L_SIZE, SEEK_END);
-  safe_fread(&num_edges, L_SIZE, 1, csr);
-  fclose_tracked(1);
+  l_uint num_edges = GLOBAL_all_leaves[num_v]->edge_start;
 
   l_uint *clusters = safe_malloc(L_SIZE * num_v);
   leaf *tmpleaf;
@@ -1840,7 +1775,7 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
     reset_trie_clusters(num_v);
 
     // cluster with transformed weights
-    cluster_file(csrfile, transformedweights, neighborfile,
+    cluster_file(transformedweights, neighborfile,
                   num_v, num_iter, v, self_loop_weight, atten_pow);
 
     if(v >= VERBOSE_BASIC) Rprintf("\tRecording results...\n");
@@ -1858,12 +1793,12 @@ static void consensus_cluster_oom(const char* csrfile, const char* weightsfile,
 
   // now we can just destroy the other files
   if(v >= VERBOSE_BASIC) Rprintf("Reconciling runs...\n");
-  resolve_cluster_consensus(tmpclusterfile, csrfile, weightsfile, neighborfile,
+  resolve_cluster_consensus(tmpclusterfile, weightsfile, neighborfile,
                             num_v, consensus_len);
 
   if(v >= VERBOSE_BASIC) Rprintf("Clustering on consensus data...\n");
   reset_trie_clusters(num_v);
-  cluster_file(csrfile, weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow);
+  cluster_file(weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow);
 
   return;
 }
@@ -1971,8 +1906,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
 
   // main files
   const char* dir = CHAR(STRING_ELT(OUTDIR, 0));
-  const char* tabfile = create_filename(dir, "tabfile.bin");
-  const char* temptabfile = create_filename(dir, "temptabfile.bin");
   const char* weightsfile = create_filename(dir, "weights.bin");
   const char* neighborfile = create_filename(dir, "neighbors.bin");
   const int num_ofiles = LENGTH(OUTFILES);
@@ -2012,26 +1945,28 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   time2 = time(NULL);
   if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
 
-  // allocate space for leaf counters
+  // allocate space for leaf counters (one extra space to hold final value of cumulative counts)
   GLOBAL_all_leaves = safe_malloc(sizeof(leaf *) * (num_v+1));
 
   // next, reformat the file to get final counts for each node
   if(verbose >= VERBOSE_BASIC) Rprintf("Tidying up internal tables...\n");
-  //num_v = node_vertex_file_cleanup(dir, hashfile, temptabfile, hashindex, verbose);
-  FILE *tempcounts = safe_fopen(temptabfile, "wb");
-  if(!tempcounts) error("could not open file %s\n", temptabfile);
-
   l_uint print_val = 0;
-  l_uint max_degree = reindex_trie_and_write_counts(GLOBAL_trie, tempcounts, 0, verbose, &print_val);
-  fclose_tracked(1);
+  l_uint max_degree = reindex_trie_and_write_counts(GLOBAL_trie, 0, verbose, &print_val);
+
+  // change edge_start values to cumulative counts
+  GLOBAL_all_leaves[num_v] = malloc(sizeof(leaf));
+  GLOBAL_all_leaves[num_v]->count = 0;
+  l_uint running_sum = 0;
+  for(l_uint i=0; i<=num_v; i++){
+    leaf* tmp_leaf = GLOBAL_all_leaves[i];
+    running_sum += tmp_leaf->edge_start;
+    tmp_leaf->edge_start = running_sum - tmp_leaf->edge_start;
+  }
 
   if(verbose >= VERBOSE_BASIC) Rprintf("\tFound %" lu_fprint " unique vertices!\n", num_v);
 
   // get base number of iterations
-  // + 2 is to add an extra in case there are self loops
-  // may have an extra, but like at the end of the day, it's one extra degree
-  // not a huge deal
-  max_degree = (l_uint)(sqrt((double)max_degree)) + 2;
+  max_degree = (l_uint)(sqrt((double)max_degree));
   size_t num_bits = sizeof(aq_int) * 8 - 1; // signed, so we have one less bit to work with
   base_iter = ((aq_int)(1)) << num_bits;
   base_iter = base_iter > max_degree ? max_degree : base_iter;
@@ -2047,10 +1982,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(filled_iter && verbose >= VERBOSE_BASIC)
     Rprintf("\tAutomatically setting zero-value iterations to %d\n", base_iter);
 
-  // next, create an indexed table file of where data for each vertex will be located
-  if(verbose >= VERBOSE_BASIC) Rprintf("Reformatting vertex degree file...\n");
-  reformat_counts(temptabfile, tabfile, num_v);
-
   // then, we'll create the CSR compression of all our edges
   time1 = time(NULL);
   if(verbose >= VERBOSE_BASIC) Rprintf("Reading in edges...\n");
@@ -2058,7 +1989,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   for(int i=0; i<num_edgefiles; i++){
     edgefile = CHAR(STRING_ELT(FILENAME, i));
     num_edges += csr_compress_edgelist_trie_batch(edgefile, GLOBAL_trie,
-                                tabfile, weightsfile, neighborfile,
+                                weightsfile, neighborfile,
                                 seps[0], seps[1], num_v, verbose,
                                 is_undirected,
                                 ignore_weights, use_inplace_sort);
@@ -2095,13 +2026,13 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     reset_trie_clusters(num_v);
     time1 = time(NULL);
     if(consensus_len){
-      consensus_cluster_oom(tabfile, weightsfile, neighborfile, dir, num_v,
+      consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
                             num_iter[i], verbose, self_loop_weights[i], atten_power[i],
                             consensus_w, consensus_len);
 
     } else {
       if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
-      cluster_file(tabfile, weightsfile, neighborfile, num_v, num_iter[i], verbose,
+      cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
                     self_loop_weights[i], atten_power[i]);
     }
     time2 = time(NULL);
@@ -2123,7 +2054,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     fclose_tracked(1);
   }
 
-  remove(tabfile);
   remove(weightsfile);
   remove(neighborfile);
   cleanup_ondisklp_global_values();
