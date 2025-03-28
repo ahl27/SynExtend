@@ -18,8 +18,9 @@
 #define MIN_VALUE_BMAP2 87
 
 typedef struct leaf {
-	trie_uint count; //(making this uint32_t can save a lot of space)
+	trie_uint count; // also tracks the cluster number
 	trie_uint index;
+	trie_uint edge_start; // start position of edges in the disk file
 	dist_uint dist; // distance to original label, used for attentuation
 } leaf;
 

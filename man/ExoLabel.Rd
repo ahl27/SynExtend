@@ -17,7 +17,7 @@ ExoLabel(edgelistfiles,
               iterations=0L,
               return_table=FALSE,
               consensus_cluster=FALSE,
-              use_fast_sort=FALSE,
+              use_fast_sort=TRUE,
               verbose=interactive(),
               sep='\t',
               tempfiledir=tempdir())
@@ -37,7 +37,7 @@ Character; Specifies whether edges should be interpreted as undirected (default)
 }
 
 \item{add_self_loops}{
-Logical or Numeric; Determines if self loops should be added to the network. If \code{TRUE}, adds self loops of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self loops of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
+Logical or Numeric; Determines if a self-loop cutoff should be added to the network. A self-loop cutoff of value \code{w} requires that at least one incoming edge has weight \code{w} in order to assign the node to that cluster (See "Self-Loops" for more information). If \code{TRUE}, adds self-loop cutoffs of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self-loop cutoffs of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
 }
 
 \item{attenuation}{
@@ -61,7 +61,7 @@ Logical or Numeric; Determines if consensus clustering should be used. If \code{
 }
 
 \item{use_fast_sort}{
-Logical; Determines how files should be sorted. If \code{FALSE}, ExoLabel will perform file sorting functions in-place. If \code{TRUE}, ExoLabel will perform its file sorting functions using a second temporary file. This is much faster than the in-place sort, but consumes twice the amount of disk space. The relative disk consumption is about the same size as the input graph for \code{use_fast_sort=FALSE}, and about double the size of the input graph for \code{use_fast_sort=TRUE} (see "Memory Consumption" and the last paragraph of "Warning" below). Set to \code{TRUE} if you're not worried about disk utilization.
+Logical; Determines how files should be sorted. If \code{FALSE}, ExoLabel will perform file sorting functions in-place. If \code{TRUE}, ExoLabel will perform its file sorting functions using a second temporary file. This is much faster than the in-place sort, but consumes twice the amount of disk space. The relative disk consumption is about the same size as the input graph for \code{use_fast_sort=FALSE}, and about double the size of the input graph for \code{use_fast_sort=TRUE} (see "Memory Consumption" and the last paragraph of "Warning" below). Set to \code{FALSE} if you're worried about disk utilization.
 }
 
 \item{verbose}{
@@ -91,6 +91,14 @@ If \code{ignore_weight=TRUE}, the file can be formatted as:
 \code{VERTEX1<sep>VERTEX2<linesep>}
 
 Note that the \code{v1 v2 w} format is still accepted for \code{ignore_weight=FALSE}, but the weights will be ignored.
+}
+
+\section{Self-Loops}{
+  Label Propagation algorithms are susceptible to a large number of small weights outcompeting small numbers of strong edges. While self-loops can be added to mitigate this problem, they fail to scale to larger networks because noise scales quadratically, whereas self-loops scale linearly. The standard usage of self-loops adds a self-loop edge with fixed weight \eqn{w} to each node, essentially requiring any node's neighboring communities to have at least weight \eqn{w} to propagate. In a setting like orthology detection, spurious similarity scores will eventually outweigh both true similarities and the self-loop edges.
+
+  To combat this, we treat self-loop values as a "self-loop cutoff" rather than a fixed value. Self-loop cutoffs are a value \eqn{w'} such that all neighboring communities must have at least one edge of weight \eqn{w'} in order to propagate. With this usage, even if a node has many neighbors in the same community with spurious similarities, it must have at least one neighbor in that community with a strong similarity in order for the node to join that community. This approach scales better with the size of graphs compared to the traditional usage of self-loops.
+
+  As an example, consider a node \eqn{N} not yet assigned to a community with 10 neighbors. Neighbors 1-9 are in community 1 with weight 0.1, and neighbor 10 is in community 2 with weight 0.8. Community 1 thus has weight 0.9, and community 2 has weight 0.8. In the context of orthology detection, values below 0.2 are likely to be spurious. With a self-loop of 0.4, \eqn{N} would still be assigned to community 1, despite these being likely spurious. However, with a self-loop cutoff of 0.4, \eqn{N} would be assigned to community 2 because no edge in community 1 is at least 0.4.
 }
 
 \section{Algorithm Convergence}{

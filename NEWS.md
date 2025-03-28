@@ -1,3 +1,9 @@
+# SynExtend 1.19.9
+* Bugfixes to `ExoLabel`
+* `ExoLabel` now defaults to `use_fast_sort=TRUE`
+* Various QoL changes for `ExoLabel(..., return_table=TRUE)`
+* `ExoLabel` now correctly reports timing
+
 # SynExtend 1.19.8
 * `ExoLabel` has a new parameter to tune the performance of hop-length attenuation.
 * Documentation and formatting updates.
