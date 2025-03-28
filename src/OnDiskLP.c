@@ -732,7 +732,12 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
   }
   // cur_source will always be the file we just WROTE to here
 
-  if(verbose >= VERBOSE_BASIC) Rprintf("\n");
+  if(verbose == VERBOSE_ALL){
+    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+                            tmpniter, nmax_iterations, 100.0);
+    report_filesize(max_fsize);
+    Rprintf(")  \n");
+  }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
   fclose_tracked(1);
@@ -916,7 +921,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
 
   if(verbose == VERBOSE_ALL){
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
-                      tmpniter, nmax_iterations, cur_progress);
+                      tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
     Rprintf(")  \n");
   }
@@ -1874,14 +1879,11 @@ static l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *cl
           clust_mapping[tmpval] = CLUST_MAP_CTR++;
         }
         tmpval = clust_mapping[tmpval];
-        //fseek(clusterfile, tmpval*L_SIZE, SEEK_SET);
-        //safe_fread(&tmpval, L_SIZE, 1, clusterfile);
 
         // prepare data for output
         s[cur_pos] = 0;
         snprintf(write_buf, num_bytes, "%s%c%" lu_fprint "%c", s, seps[0], tmpval, seps[1]);
-        // DEBUG: Get indices for each vertex
-        // Rprintf("%s (%" lu_fprint ")\n", s, ((leaf *)(trie->child_nodes[0]))->index);
+
         safe_fwrite(write_buf, 1, strlen(write_buf), outfile);
         num_v--;
         if(num_v % PROGRESS_COUNTER_MOD == 0){
