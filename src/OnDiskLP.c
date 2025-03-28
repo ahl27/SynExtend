@@ -1455,7 +1455,10 @@ static void update_node_cluster(l_uint ind,
   w_float *weights_arr;
   l_uint *clusts;
   l_uint *indices;
+  char *sufficient_weight;
   leaf **neighbors;
+  leaf* original_node = GLOBAL_all_leaves[ind];
+  l_uint original_cluster = original_node->count;
 
   // move to information for the vertex and read in number of edges
   // TODO: can we put this in the trie?
@@ -1471,9 +1474,10 @@ static void update_node_cluster(l_uint ind,
 
 
   // adding in an extra space for the self loop (even if it's zero!)
-  weights_arr = safe_malloc(W_SIZE*(num_edges+1));
-  clusts = safe_malloc(L_SIZE*(num_edges+1));
-  neighbors = safe_malloc(sizeof(leaf*)*(num_edges+1));
+  weights_arr = safe_malloc(W_SIZE*(num_edges));
+  clusts = safe_malloc(L_SIZE*(num_edges));
+  neighbors = safe_malloc(sizeof(leaf*)*(num_edges));
+  sufficient_weight = safe_malloc(num_edges);
 
   // read in the edges
   fseek(weightsfile, start*W_SIZE, SEEK_SET);
@@ -1484,36 +1488,39 @@ static void update_node_cluster(l_uint ind,
   safe_fread(weights_arr, W_SIZE, num_edges, weightsfile);
 
   // add in the self loop
-  clusts[num_edges] = ind;
-  weights_arr[num_edges] = self_loop_weight;
+  //clusts[num_edges] = ind;
+  //weights_arr[num_edges] = self_loop_weight;
 
   // read in the clusters
-  for(l_uint i=0; i<=num_edges; i++){
+  for(l_uint i=0; i<num_edges; i++){
     neighbors[i] = GLOBAL_all_leaves[clusts[i]];
     // attenuate edges, using adaptive scaling
     // see https://doi.org/10.1103/PhysRevE.83.036103, eqns 4-5
+    sufficient_weight[i] = weights_arr[i] >= self_loop_weight;
     weights_arr[i] *= 1-(atten_param * neighbors[i]->dist);
     if(fabs(weights_arr[i]) < CLUSTER_MIN_WEIGHT) weights_arr[i] = 0;
   }
-  free(clusts);
 
   // sort both leaves and weights by assigned cluster
   // note that this just sorts the indexes vector, not the array itself
-  indices = safe_malloc(L_SIZE*(num_edges+1));
-  for(l_uint i=0; i<=num_edges; i++) indices[i] = i;
+  // we can just reuse clusts here
+  indices = clusts;
+  for(l_uint i=0; i<num_edges; i++) indices[i] = i;
   GLOBAL_leaf = neighbors;
-  qsort(indices, num_edges+1, L_SIZE, leaf_index_compar);
+  qsort(indices, num_edges, L_SIZE, leaf_index_compar);
 
 
   // figure out the cluster to update to
   double max_weight=0, cur_weight=0, cur_error=0;
-  l_uint max_clust=0, cur_clust=neighbors[num_edges]->count;
+  l_uint max_clust=0, cur_clust=0;
   dist_uint new_dist = -1, min_dist = -1; // type defined in PrefixTrie.h
+  char found_sufficient_weight = 0; // check if seen a weight at least self_loop_weight
   leaf* cur_neighbor;
-  for(l_uint i=0; i<=num_edges; i++){
+  for(l_uint i=0; i<num_edges; i++){
     cur_neighbor = neighbors[indices[i]];
     if(cur_neighbor->count != cur_clust){
-      if(max_weight < cur_weight){
+      // ensure we've found an edge at least larger than self_loop
+      if(found_sufficient_weight && max_weight < cur_weight){
         max_weight = cur_weight;
         max_clust = cur_clust;
         new_dist = min_dist;
@@ -1521,37 +1528,42 @@ static void update_node_cluster(l_uint ind,
       cur_clust = cur_neighbor->count;
       cur_weight = 0;
       min_dist = -1;
-      cur_error=0;
+      cur_error = 0;
+      found_sufficient_weight = 0;
     }
     if(weights_arr[indices[i]]){
       kahan_accu(&cur_weight, &cur_error, weights_arr[indices[i]]);
       min_dist = min_dist > cur_neighbor->dist ? cur_neighbor->dist : min_dist;
+      if(sufficient_weight[indices[i]])
+        found_sufficient_weight = 1;
     }
   }
-  if(max_weight < cur_weight){
+  if(found_sufficient_weight && max_weight < cur_weight){
     max_weight = cur_weight;
     max_clust = cur_clust;
     new_dist = min_dist;
   }
   if(max_clust == 0){
     // max_clust == 0 case is for when the node has no edges,
-    // which would skip the above loop and assign the node to 0 (invalid)
-    // we could also never update it because all weights are negative
-    // (due to attenuation)
-    max_clust = neighbors[num_edges]->count;
+    // which would skip the above loop and assign the node to 0 (invalid),
+    // or if we never update it because all weights are negative
+    // (due to attenuation), or if none are larger than self-loop
+    //max_clust = neighbors[num_edges]->count;
+    max_clust = original_cluster;
   }
+  free(sufficient_weight);
 
   // have to actually write the new cluster and add changed nodes
   // only need to do this if it's changed, though
-  if(max_clust != neighbors[num_edges]->count){
+  if(max_clust != original_cluster){
     GLOBAL_verts_changed++;
-    neighbors[num_edges]->count = max_clust;
+    //neighbors[num_edges]->count = max_clust;
+    original_node->count = max_clust;
     // increment while handling overflow
     new_dist = new_dist+1 ? new_dist+1 : new_dist;
-    neighbors[num_edges]->dist = new_dist;
+    original_node->dist = new_dist;
     add_remaining_to_queue(max_clust, neighbors, weights_arr, num_edges, queue);
   }
-
 
   free(weights_arr);
   free(neighbors);
