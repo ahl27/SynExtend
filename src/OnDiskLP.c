@@ -624,7 +624,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
 
     tmpniter++;
     if(verbose == VERBOSE_ALL){
-      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
       Rprintf(")  \r");
@@ -687,7 +687,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
               cur_fsize = ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -713,7 +713,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
               cur_fsize = ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -733,7 +733,7 @@ static void kway_mergesort_file_inplace(const char* f1, l_uint nlines,
   // cur_source will always be the file we just WROTE to here
 
   if(verbose == VERBOSE_ALL){
-    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
     Rprintf(")  \n");
@@ -813,7 +813,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
 
     tmpniter++;
     if(verbose == VERBOSE_ALL){
-      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+      Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                         tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
       Rprintf(")  \r");
@@ -874,7 +874,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
               cur_fsize = ftell(file1) + ftell(file2);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
-            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+            Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
             Rprintf(")  \r");
@@ -893,12 +893,12 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
             cur_fsize = ftell(file1) + ftell(file2);
             if(cur_fsize > max_fsize) max_fsize = cur_fsize;
           }
-          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
           report_filesize(max_fsize);
           Rprintf(")  \r");
         } else if(verbose == VERBOSE_BASIC && cur_progress == 100){
-          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
           report_filesize(max_fsize);
           Rprintf(")  \n");
@@ -920,7 +920,7 @@ static void kway_mergesort_file(const char* f1, const char* f2, l_uint nlines,
   // cur_source will always be the file we just WROTE to here
 
   if(verbose == VERBOSE_ALL){
-    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% complete, used ",
+    Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                       tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
     Rprintf(")  \n");
@@ -1563,7 +1563,7 @@ static void cluster_file(const char* weights_fname,
   iteration_length = GLOBAL_queue->length;
   if(v >= VERBOSE_BASIC) Rprintf("done.\n\tClustering network:\n");
 
-  if(v == VERBOSE_ALL) Rprintf("\t0.0%% complete %s", progress[++statusctr%progbarlen]);
+  if(v == VERBOSE_ALL) Rprintf("\t0.0%% Complete %s", progress[++statusctr%progbarlen]);
   /*
    * TODO: we can parallelize this, right?
    *    - set up the number of threads
@@ -1593,7 +1593,7 @@ static void cluster_file(const char* weights_fname,
         } else {
           prev_pct = pct_complete;
         }
-        Rprintf("\r\t%0.1f%% complete %s", (pct_complete)*100, progress[++statusctr%progbarlen]);
+        Rprintf("\r\t%0.1f%% Complete %s", (pct_complete)*100, progress[++statusctr%progbarlen]);
       } else{
         R_CheckUserInterrupt();
       }
@@ -1612,7 +1612,7 @@ static void cluster_file(const char* weights_fname,
   if(v >= VERBOSE_BASIC){
     if(v == VERBOSE_ALL) Rprintf("\r");
     if(max_iterations > 0)
-      Rprintf("\t100%% complete!                \n");
+      Rprintf("\t100%% Complete!                \n");
     else
       Rprintf("\tComplete! (%d total iterations)     \n", i+1);
   }
