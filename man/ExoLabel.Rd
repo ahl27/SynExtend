@@ -9,7 +9,7 @@ Detects communities in networks with Fast Label Propagation using disk space to 
 }
 \usage{
 ExoLabel(edgelistfiles,
-              outfile=tempfile(),
+              outfile=tempfile(tmpdir=tempfiledir),
               mode=c("undirected", "directed"),
               add_self_loops=FALSE,
               attenuation=TRUE,
