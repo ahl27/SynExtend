@@ -11,11 +11,12 @@
 //#include <stdio.h>
 
 #define trie_uint uint64_t
-#define dist_uint uint16_t // 16 bits is plenty, can always change later
+#define dist_uint uint32_t
 #define FALSE 0
 #define TRUE 1
 #define CHAR_OFFSET 31
 #define MIN_VALUE_BMAP2 87
+#define DIST_UINT_MAX 4294967295ULL // max value of a 32-bit unsigned
 
 typedef struct leaf {
 	trie_uint count; // also tracks the cluster number

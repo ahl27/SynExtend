@@ -1,3 +1,7 @@
+# SynExtend 1.19.10
+* Fixes critical bug in `ExoLabel` that previously caused large networks to always report a single large cluster
+* `ExoLabel` no longer allows negative weights to become positive via attenuation (positive weights can still become negative)
+
 # SynExtend 1.19.9
 * Bugfixes to `ExoLabel`
 * `ExoLabel` now defaults to `use_fast_sort=TRUE`
