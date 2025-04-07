@@ -171,7 +171,8 @@ ExoLabel <- function(edgelistfiles,
   retval <- list()
   for(i in seq_along(outfile)){
     param_vec <- c(add_self_loops=add_self_loops[i],
-                   attenuation=attenuation[i])
+                   attenuation=attenuation[i],
+                   iterations=iterations[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")

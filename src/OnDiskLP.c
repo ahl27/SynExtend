@@ -326,7 +326,7 @@ static void report_filesize(l_uint bytes){
 /************************/
 
 static void kahan_accu(double *cur_sum, double *cur_err, double new_val){
-  // this is an accumulator that will use a kahan sum to reduce floating point accuracy
+  // this is an accumulator that will use a kahan sum to improve floating point accuracy
   double sum, y, z;
   sum = *cur_sum;
 
@@ -350,33 +350,58 @@ static inline float sigmoid_transform(const float w, const double slope){
 }
 
 static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
+  /*
+   * The formula I'm using for compression is the following:
+   * compressed_weight = log(min(abs(x+1), 1204))
+   * (1204 keeps the result right below 1024 so it fits in 10 bits)
+   * this is multiplied by 100 to make it a fixed point integer
+   * e.g., first number is whole part, next three are decimals
+   * it's a base-10 fixed point, could do base-2 for efficiency later
+   *
+   * This compression has good accuracy for weights in [-1204,1204]
+   * and it only consumes 11 bits (10 for value, 1 for sign).
+   * Also doesn't require us to record the maximum weight throughout the edges.
+   */
   edge e;
   e.v = v1;
   l_uint v2_comp = v2;
-  v2_comp <<= BITS_FOR_WEIGHT;
+  v2_comp <<= BITS_FOR_WEIGHT+1;
 
-  // normalize to 0-1 scale
-  weight = weight / GLOBAL_max_weight;
+  l_uint is_negative = weight < 0 ? (1ULL << BITS_FOR_WEIGHT) : 0;
+  weight = fabs(weight) + 1;
+  if(weight >= 1204) weight = 1204;
 
-  // quantize to number of allowable bits
-  l_uint max_weight_bits = (1 << BITS_FOR_WEIGHT) - 1;
-  l_uint w_comp = (l_uint) floor(weight * max_weight_bits);
+  l_uint max_weight_bits = (1UL << BITS_FOR_WEIGHT) - 1;
+  l_uint w_comp = (l_uint) round(log2(weight) * 100);
 
-  e.w = v2_comp | w_comp;
+  w_comp = w_comp & max_weight_bits;
+
+  e.w = v2_comp | is_negative | w_comp;
   return e;
 }
 
 static void decompressEdgeValue(l_uint compressed, l_uint *v2, w_float *w){
-  l_uint max_weight_bits = (1 << BITS_FOR_WEIGHT) - 1;
-  l_uint w_comp = compressed & max_weight_bits;
+  /*
+   * See compressEdgeValues for description
+   * 64-bit unsigned integer
+   * first 53 bits are the index
+   * 54'th bit is the sign
+   * bits 55-64 are the compressed weight
+   */
+  // mask to get the weight out
+  l_uint max_weight_bits = (1UL << BITS_FOR_WEIGHT) - 1;
 
-  // two assignments because I'd like to minimize loss of precision
-  double w_temp = ((double)w_comp) / max_weight_bits;
-  w_temp *= GLOBAL_max_weight;
+  // sign bit
+  int is_negative = ((1UL << BITS_FOR_WEIGHT) & compressed) > 0;
 
-  //double w_temp = (((double)w_comp) * 2 * GLOBAL_max_weight) / max_weight_bits;
-  *w = (w_float)w_temp;
-  *v2 = compressed >> BITS_FOR_WEIGHT;
+  // get the weight in compressed form
+  double w_comp = (double) (compressed & max_weight_bits);
+
+  w_comp = pow(2, (w_comp-1)/100);
+  if(is_negative) w_comp *= -1;
+
+  *w = (w_float)w_comp;
+  *v2 = compressed >> (BITS_FOR_WEIGHT+1);
 
   return;
 }
@@ -1215,7 +1240,7 @@ static l_uint reindex_trie_and_write_counts(prefix *trie,
     l->edge_start = l->count; // will handle this later
 
     // set count (cluster) to index+1
-    l->count = cur_index+1;
+    //l->count = cur_index+1;
     (*nseen)++;
     if(((*nseen)+1) % PRINT_COUNTER_MOD == 0){
       R_CheckUserInterrupt();
@@ -1243,7 +1268,7 @@ static void reset_trie_clusters(l_uint num_v){
 }
 
 static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *trie,
-                                  const char* fweight, const char* fneighbor,
+                                  FILE* neighbortable,
                                   const char sep, const char linesep, l_uint num_v, int v,
                                   const int is_undirected,
                                   const int ignore_weights, const int sort_inplace){
@@ -1282,12 +1307,10 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
   vname = safe_malloc(MAX_NODE_NAME_SIZE);
   edges = safe_malloc(FILE_READ_CACHE_SIZE * sizeof(edge));
 
-  FILE *edgelist, *neighbortable;
-  edgelist = safe_fopen(edgefile, "rb");
+  FILE *edgelist = safe_fopen(edgefile, "rb");
 
-  // open neighbors table
-  neighbortable = safe_fopen(fneighbor, "ab");
-
+  //FILE *debug_file = safe_fopen("/Users/aidan/Downloads/RawFileDump/SeparateFiles.txt", "a");
+  //char debug_s[256];
   // note: weights/neighbors don't need to be initialized
   // see https://stackoverflow.com/questions/31642389/fseek-a-newly-created-file
 
@@ -1349,6 +1372,18 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
       // sort the block and write it to the neighbors file
       qsort(edges, cachectr, sizeof(edge), edge_compar);
       nedges += safe_fwrite(edges, sizeof(edge), cachectr, neighbortable);
+
+      /*
+      // DEBUG
+      l_uint debug_v;
+      w_float debug_w;
+      int to_write_num;
+      for(int i=0; i<cachectr; i++){
+        decompressEdgeValue(edges[i].w, &debug_v, &debug_w);
+        to_write_num = sprintf(debug_s, "%05llu %05llu %5.3f\n", edges[i].v, debug_v, debug_w);
+        safe_fwrite(debug_s, 1, to_write_num, debug_file);
+      }
+      */
       cachectr = 0;
     }
 
@@ -1358,9 +1393,8 @@ static l_uint csr_compress_edgelist_trie_batch(const char* edgefile, prefix *tri
       R_CheckUserInterrupt();
     }
   }
-
   if(v >= VERBOSE_BASIC) Rprintf("\t%" lu_fprint " edges read\n", print_counter);
-  fclose_tracked(2);
+  fclose_tracked(1);
   free(edges);
   free(vname);
   free(read_cache);
@@ -1471,6 +1505,7 @@ static void update_node_cluster(l_uint ind,
 
 
   // figure out the cluster to update to
+  // TODO: shouldn't max_weight be DOUBLE_MIN ?
   double max_weight=0, cur_weight=0, cur_error=0;
   l_uint max_clust=0, cur_clust=0;
   dist_uint new_dist = -1, min_dist = -1; // type defined in PrefixTrie.h
@@ -1487,7 +1522,7 @@ static void update_node_cluster(l_uint ind,
       }
       cur_clust = cur_neighbor->count;
       cur_weight = 0;
-      min_dist = -1;
+      min_dist = -1; // unsigned, so this becomes the maximum value
       cur_error = 0;
       found_sufficient_weight = 0;
     }
@@ -1875,6 +1910,121 @@ static l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *cl
   return num_v;
 }
 
+static inline l_uint get_dsu_rep(l_uint* reps, l_uint v){
+  if(reps[v] != v) reps[v] = get_dsu_rep(reps, reps[v]);
+  return reps[v];
+}
+
+static void merge_dsu_sets(l_uint *reps, l_uint *sizes, int v1, int v2){
+  l_uint key1 = get_dsu_rep(reps, v1);
+  l_uint key2 = get_dsu_rep(reps, v2);
+  if(key1 == key2) return;
+  if(sizes[key1] > sizes[key2]){
+    l_uint tmp = key1;
+    key1 = key2;
+    key2 = tmp;
+  }
+  reps[key1] = key2;
+  sizes[key2] += sizes[key1];
+  return;
+}
+
+static inline int lu_compar(const void *a, const void *b){
+  return *(l_uint*)b - *(l_uint*)a;
+}
+
+static void find_disjoint_sets(l_uint num_v, int verbose, double cutoff,
+                              const char* edges_file, const char* weights_file){
+  l_uint* sets = safe_malloc(sizeof(l_uint) * num_v);
+  l_uint* sizes = safe_malloc(sizeof(l_uint) * num_v);
+  FILE *efile = safe_fopen(edges_file, "rb");
+  FILE *wfile = safe_fopen(weights_file, "rb");
+
+  for(l_uint i = 0; i < num_v; i++){
+    sets[i] = i;
+    sizes[i] = 1;
+  }
+
+  if(verbose >= VERBOSE_BASIC){
+    Rprintf("\nFinding disjoint sets for %" lu_fprint " nodes at cutoff %0.1f.\n", num_v, cutoff);
+  }
+
+  l_uint start, nedges, buf_size = 0;
+  l_uint *indices = NULL;
+  w_float *weights = NULL;
+  for(l_uint i=0; i<num_v; i++){
+    if(verbose >= VERBOSE_ALL) Rprintf("\t%6.2f%% Complete.\r", ((double)(i)) / num_v * 100);
+    start = GLOBAL_all_leaves[i]->edge_start;
+    nedges = GLOBAL_all_leaves[i+1]->edge_start - start;
+    if(nedges == 0) continue;
+    if(buf_size < nedges){
+      indices = safe_realloc(indices, nedges*L_SIZE);
+      weights = safe_realloc(weights, nedges*W_SIZE);
+      buf_size = nedges;
+    }
+    fseek(efile, start*L_SIZE, SEEK_SET);
+    fseek(wfile, start*W_SIZE, SEEK_SET);
+    safe_fread(indices, L_SIZE, nedges, efile);
+    safe_fread(weights, W_SIZE, nedges, wfile);
+    for(l_uint j=0; j<nedges; j++){
+      if(weights[j] >= cutoff)
+          merge_dsu_sets(sets, sizes, i, indices[j]);
+    }
+  }
+
+  if(indices) free(indices);
+  if(weights) free(weights);
+
+  // this will compress all paths to their final value
+  if(verbose >= VERBOSE_BASIC) Rprintf("Disjoint set sizes: ");
+  l_uint num_disjoint_sets = 0;
+  for(l_uint i=0; i<num_v; i++) get_dsu_rep(sets, i);
+
+  for(l_uint i=0; i<num_v; i++){
+    if(sets[i] == i){
+      sets[num_disjoint_sets++] = sizes[i];
+    }
+  }
+  qsort(sets, num_disjoint_sets, L_SIZE, lu_compar);
+  if(verbose >= VERBOSE_BASIC){
+    Rprintf("Top 5 set sizes: ");
+    for(int i=0; i<5; i++) Rprintf("%" lu_fprint " ", sets[i]);
+    Rprintf("\n%" lu_fprint " total sets.\n", num_disjoint_sets);
+  }
+
+  free(sets);
+  free(sizes);
+  fclose_tracked(2);
+  return;
+}
+
+static void write_raw_filecontents(const char* infile, const char* outfile){
+  FILE* to_read = safe_fopen(infile, "rb");
+  FILE* to_write = safe_fopen(outfile, "wb");
+
+  char* buffer = safe_malloc(FILE_READ_CACHE_SIZE);
+  size_t nread = FILE_READ_CACHE_SIZE;
+  while(nread == FILE_READ_CACHE_SIZE){
+    nread = fread(buffer, 1, FILE_READ_CACHE_SIZE, to_read);
+    fwrite(buffer, 1, FILE_READ_CACHE_SIZE, to_write);
+  }
+  fclose_tracked(2);
+}
+
+static void get_random_filecontents(const char* infile, size_t offset, size_t to_read){
+  FILE *f = safe_fopen(infile, "rb");
+  edge e;
+  l_uint v2;
+  w_float w;
+  fseek(f, offset*sizeof(edge), SEEK_SET);
+  for(size_t i=0; i<to_read; i++){
+    safe_fread(&e, 1, sizeof(edge), f);
+    decompressEdgeValue(e.w, &v2, &w);
+    Rprintf("%llu %llu %0.4f\n", e.v, v2, w);
+  }
+  fclose_tracked(1);
+}
+
 SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILES,  // more files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
@@ -1966,6 +2116,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   for(l_uint i=0; i<=num_v; i++){
     leaf* tmp_leaf = GLOBAL_all_leaves[i];
     running_sum += tmp_leaf->edge_start;
+    tmp_leaf->count = i+1;
     tmp_leaf->edge_start = running_sum - tmp_leaf->edge_start;
   }
 
@@ -1992,14 +2143,23 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   time1 = time(NULL);
   if(verbose >= VERBOSE_BASIC) Rprintf("Reading in edges...\n");
   l_uint num_edges = 0;
+  FILE *neighbortable = safe_fopen(neighborfile, "ab");
   for(int i=0; i<num_edgefiles; i++){
     edgefile = CHAR(STRING_ELT(FILENAME, i));
     num_edges += csr_compress_edgelist_trie_batch(edgefile, GLOBAL_trie,
-                                weightsfile, neighborfile,
+                                neighbortable,
                                 seps[0], seps[1], num_v, verbose,
                                 is_undirected,
                                 ignore_weights, use_inplace_sort);
   }
+  fclose_tracked(1);
+
+  // report the raw file contents
+  //write_raw_filecontents(neighborfile, "/Users/aidan/Downloads/RawFileDump/SeparateFiles.bin");
+  //get_random_filecontents(neighborfile, 9094025ULL-4, 8);
+  //error("stop here please.");
+
+  if(verbose >= VERBOSE_BASIC) Rprintf("%" lu_fprint " total edges.\n", num_edges);
   // sort the file and split it into neighbor and weight
   if(FILE_READ_CACHE_SIZE < num_edges){
     if(use_inplace_sort){
@@ -2023,8 +2183,11 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   split_sorted_file(neighborfile, weightsfile, num_edges, verbose);
   time2 = time(NULL);
   //check_mergedsplit_file(neighborfile, weightsfile);
-
   if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
+
+  // DEBUG
+  find_disjoint_sets(num_v, verbose, 0.0, neighborfile, weightsfile);
+  find_disjoint_sets(num_v, verbose, 0.4, neighborfile, weightsfile);
 
   char vert_name_holder[MAX_NODE_NAME_SIZE];
   char write_buffer[PATH_MAX];
