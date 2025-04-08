@@ -1326,7 +1326,7 @@ static void add_remaining_to_queue(l_uint new_clust, leaf **neighbors,
 }
 
 static void update_node_cluster(l_uint ind,
-                          float self_loop_weight,
+                          float self_loop_weight, float dist_pow,
                           FILE *weightsfile, FILE *neighborfile,
                           ArrayQueue *queue, float atten_param){
   /*
@@ -1348,8 +1348,6 @@ static void update_node_cluster(l_uint ind,
   leaf **neighbors;
   leaf* original_node = GLOBAL_all_leaves[ind];
   l_uint original_cluster = original_node->count;
-
-  w_float dist_pow = 0.5; // TODO: expose this to user
 
   // get the number of edges
   start = GLOBAL_all_leaves[ind]->edge_start;
@@ -1374,7 +1372,6 @@ static void update_node_cluster(l_uint ind,
   safe_fread(weights_arr, W_SIZE, num_edges, weightsfile);
 
   // read in the clusters
-  int weight_sign = 1;
   for(l_uint i=0; i<num_edges; i++){
     neighbors[i] = GLOBAL_all_leaves[indices[i]];
     sufficient_weight[i] = weights_arr[i] >= self_loop_weight;
@@ -1382,8 +1379,10 @@ static void update_node_cluster(l_uint ind,
     // attenuate edges, using adaptive scaling
     // see https://doi.org/10.1103/PhysRevE.83.036103, eqns 4-5
     // Note all weights are positive
-    weights_arr[i] *= 1-(atten_param * pow(neighbors[i]->dist, dist_pow));
-    if(weight_sign < 0 && weights_arr[i] > 0) weights_arr[i] *= -1;
+    if(dist_pow != 1)
+      weights_arr[i] *= 1-(atten_param * pow(neighbors[i]->dist, dist_pow));
+    else
+      weights_arr[i] *= 1-(atten_param * neighbors[i]->dist);
   }
 
   // sort both leaves and weights by assigned cluster
@@ -1455,7 +1454,8 @@ static void update_node_cluster(l_uint ind,
 static void cluster_file(const char* weights_fname,
                           const char* neighbor_fname,
                           const l_uint num_v, const int max_iterations, const int v,
-                          const float self_loop_weight, const double atten_pow){
+                          const float self_loop_weight,
+                          const double atten_pow, const double dist_pow){
   // main runner function to cluster nodes
   FILE *weightsfile = safe_fopen(weights_fname, "rb+");
   FILE *neighborfile = safe_fopen(neighbor_fname, "rb");
@@ -1518,7 +1518,7 @@ static void cluster_file(const char* weights_fname,
     // or zero (because seen max_iteration times)
     aq_int num_seen = -1*GLOBAL_queue->seen[next_vert];
     if(!num_seen) num_seen = max_iterations;
-    update_node_cluster(next_vert, self_loop_weight,
+    update_node_cluster(next_vert, self_loop_weight, dist_pow,
                         weightsfile, neighborfile,
                         GLOBAL_queue, atten_param);
   }
@@ -1655,7 +1655,8 @@ static void resolve_cluster_consensus(const char* clusters,
 static void consensus_cluster_oom(const char* weightsfile,
                             const char* neighborfile, const char* dir,
                             const l_uint num_v, const int num_iter, const int v,
-                            const float self_loop_weight, const double atten_pow,
+                            const float self_loop_weight,
+                            const double atten_pow, const double dist_pow,
                             const double* consensus_weights, const int consensus_len){
 
   /*
@@ -1695,7 +1696,7 @@ static void consensus_cluster_oom(const char* weightsfile,
 
     // cluster with transformed weights
     cluster_file(transformedweights, neighborfile,
-                  num_v, num_iter, v, self_loop_weight, atten_pow);
+                  num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
 
     if(v >= VERBOSE_BASIC) Rprintf("\tRecording results...\n");
     for(l_uint i=0; i<num_v; i++){
@@ -1717,7 +1718,7 @@ static void consensus_cluster_oom(const char* weightsfile,
 
   if(v >= VERBOSE_BASIC) Rprintf("Clustering on consensus data...\n");
   reset_trie_clusters(num_v);
-  cluster_file(weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow);
+  cluster_file(weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
 
   return;
 }
@@ -1793,7 +1794,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
                     SEXP IGNORE_WEIGHTS, SEXP CONSENSUS_WEIGHTS,
-                    SEXP SORT_INPLACE, SEXP ATTEN_POWER){
+                    SEXP SORT_INPLACE, SEXP ATTEN_POWER, SEXP DIST_POWER){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1842,6 +1843,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int ignore_weights = LOGICAL(IGNORE_WEIGHTS)[0];
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
   const double* atten_power = REAL(ATTEN_POWER);
+  const double* dist_power = REAL(DIST_POWER);
 
   // consensus stuff
   const int consensus_len = length(CONSENSUS_WEIGHTS);
@@ -1941,13 +1943,14 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     time1 = time(NULL);
     if(consensus_len){
       consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
-                            num_iter[i], verbose, self_loop_weights[i], atten_power[i],
+                            num_iter[i], verbose, self_loop_weights[i],
+                            atten_power[i], dist_power[i],
                             consensus_w, consensus_len);
 
     } else {
       if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
       cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
-                    self_loop_weights[i], atten_power[i]);
+                    self_loop_weights[i], atten_power[i], dist_power[i]);
     }
     time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");

@@ -13,6 +13,7 @@ ExoLabel(edgelistfiles,
               mode=c("undirected", "directed"),
               add_self_loops=FALSE,
               attenuation=TRUE,
+              dist_scaling=TRUE,
               ignore_weights=FALSE,
               iterations=0L,
               return_table=FALSE,
@@ -29,7 +30,7 @@ Character; vector of files to be processed. Each entry should be a machine-inter
 }
 
 \item{outfile}{
-Character; file to write final clusters to. Can be set to a vector of filepaths to run multiple clusterings (see Details).
+Character; file to write final clusters to. Can be set to a vector of filepaths to run multiple clusterings (see "Multiple Clusterings").
 }
 
 \item{mode}{
@@ -37,11 +38,15 @@ Character; specifies whether edges should be interpreted as undirected (default)
 }
 
 \item{add_self_loops}{
-Logical or Numeric; determines if a self-loop cutoff should be added to the network. A self-loop cutoff of value \code{w} requires that at least one incoming edge has weight \code{w} in order to assign the node to that cluster (See "Self-Loops" for more information). If \code{TRUE}, adds self-loop cutoffs of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self-loop cutoffs of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see Details).
+Logical or Numeric; determines if a self-loop cutoff should be added to the network. A self-loop cutoff of value \code{w} requires that at least one incoming edge has weight \code{w} in order to assign the node to that cluster (See "Self-Loops" for more information). If \code{TRUE}, adds self-loop cutoffs of weight 1.0 to all vertices. If set to numeric value \code{w}, adds self-loop cutoffs of weight \code{w} to all nodes. Can also be set to a vector when running multiple clusterings (see "Multiple Clusterings").
 }
 
 \item{attenuation}{
-Logical or Numeric; determines if label-hop attenuation should be used. If \code{TRUE}, uses attenuation to prevent single clusters from dominating results. Can also be set to a numeric to influence the strength of attenuation (larger values produce larger clusters). See "Algorithm Convergence" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see Details).
+Logical or Numeric; determines if label-hop attenuation should be used. If \code{TRUE}, uses attenuation to prevent single clusters from dominating results. Can also be set to a numeric to influence the strength of attenuation (larger values produce larger clusters). See "Attenuation" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see "Multiple Clustering").
+}
+
+\item{dist_scaling}{
+Logical or Numeric; further controls the scaling of label-hop attenuation. See "Attenuation" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see "Multiple Clustering").
 }
 
 \item{ignore_weights}{
@@ -90,7 +95,7 @@ If \code{ignore_weight=TRUE}, the file can be formatted as:
 
 \code{VERTEX1<sep>VERTEX2<linesep>}
 
-Note that the \code{VERTEX1 VERTEX2 WEIGHT} format is still accepted for \code{ignore_weight=FALSE}, but the weights will be ignored.
+Note that the \code{VERTEX1<sep>VERTEX2<sep>WEIGHT} format is still accepted for \code{ignore_weight=FALSE}, but the weights will be ignored. Also note that only positive weights are recorded; negative and zero-weighted edges are ignored.
 }
 
 \section{Self-Loops}{
@@ -98,7 +103,7 @@ Note that the \code{VERTEX1 VERTEX2 WEIGHT} format is still accepted for \code{i
 
   To combat this, we treat self-loop values as a "self-loop cutoff" rather than a fixed value. Self-loop cutoffs are a value \eqn{w'} such that all neighboring communities must have at least one edge of weight \eqn{w'} in order to propagate. With this usage, even if a node has many neighbors in the same community with spurious similarities, it must have at least one neighbor in that community with a strong similarity in order for the node to join that community. This approach scales better with the size of graphs compared to the traditional usage of self-loops.
 
-  As an example, consider a node \eqn{N} not yet assigned to a community with 10 neighbors. Neighbors 1-9 are in community 1 with weight 0.1, and neighbor 10 is in community 2 with weight 0.8. Community 1 thus has total weight 0.9, and community 2 has weight 0.8. In the context of orthology detection, values below 0.2 are likely to be spurious. With a self-loop of 0.4, \eqn{N} would still be assigned to community 1, despite these being likely spurious. However, with a self-loop cutoff of 0.4, \eqn{N} would be assigned to community 2 because no edge in community 1 is at least 0.4.
+  As an example, consider a node \eqn{N} not yet assigned to a community with 10 neighbors. Neighbors 1-9 are in community 1 with weight 0.1, and neighbor 10 is in community 2 with weight 0.8. Community 1 thus has total weight 0.9, and community 2 has weight 0.8. In the context of orthology detection, values below 0.2 are likely to be spurious. With a standard self-loop of 0.4, \eqn{N} would still be assigned to community 1, despite these being likely spurious. However, with a \emph{self-loop cutoff} of 0.4, \eqn{N} would be assigned to community 2 because no edge in community 1 is at least 0.4.
 }
 
 \section{Iterations}{
@@ -106,7 +111,13 @@ One of the main issues of Label Propagation algorithms is that they can fail to 
 }
 
 \section{Attenuation}{
-ExoLabel also incorporates label-hop attenuation to reduce the chance of a single massive cluster dominating results, as inspired by Leung et al. (2009). In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. Each node's attenuated weight is calculated as \eqn{w' = w(1-p^ad)}, with \eqn{w} the node weight, \eqn{p} the proportion of nodes that changed label in the previous iteration, \eqn{a} the attenuation power (as controlled by \code{attenuation}), and \eqn{d} the distance from the initial label. Larger values of \code{attenuation} create larger clusters, whereas smaller values create smaller clusters. The default value of \code{TRUE} (equivalent to 1.0) recovers the original implementation provided in Leung et al. (2009). Passing a value of \code{FALSE} (equivalent to 0.0) disables attenuation entirely rather than returning all singleton clusters. Note that attenuation can change the sign of edge weights, but if negative edge weights are present in the graph, ExoLabel will prevent negative weights from becoming positive via attenuation (e.g., negative weights are always negative, positive weights can be attenuated to either positive or negative values).
+ExoLabel also incorporates label-hop attenuation to reduce the chance of a single massive cluster dominating results, as inspired by Leung et al. (2009). In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. Each node's attenuated weight is calculated as \eqn{w' = w(1-p^ad^s)}, with \eqn{w} the node weight, \eqn{p} the proportion of nodes that changed label in the previous iteration, \eqn{a} the attenuation power (as controlled by \code{attenuation}), \eqn{d} the distance from the initial label, and \eqn{s} the distance scaling (as controlled by \code{dist_scaling}).
+
+Larger values of \code{attenuation} create larger clusters, whereas smaller values create smaller clusters. Passing a value of \code{FALSE} (equivalent to 0.0) disables attenuation entirely rather than returning all singleton clusters.
+
+Larger values of \code{dist_scaling} create smaller clusters by making the impact of attenuation more severe, whereas smaller values create larger clusters. Setting \code{dist_scaling} to \code{FALSE} (equivalent to 0.0) will completely disable attenuation by making the algorthm ignore distances. \bold{Note:} this parameter is somewhat experimental and its use is discouraged.
+
+The default values of \code{TRUE} for both \code{attenuation} and \code{dist_scaling} (equivalent to 1.0) recover the original implementation provided in Leung et al. (2009).
 }
 
 \section{Multiple Clusterings}{
@@ -118,13 +129,15 @@ Note that the order to process each node is randomly initialized, so multiple ru
 }
 
 \section{Consensus Clustering}{
-Consensus clustering is experimental, but can be enabled by setting \code{consensus_cluster=TRUE}. Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to a sigmoid function. By default, this runs nine times for sigmoids with scale 0.5 and shape \code{c(0,0.2,0.4,0.6,0.8,1.0,1.33,1.67,2.0)}, collapsing weights below 0.1 to zero. The resulting clusters form a network such that the edge weight between any two nodes connected in the initial graph is the proportion of clusters they shared over clustering runs. This network is used for a final label propagation run, which identifies the consensus clusters. Users can specify a numeric vector as input to \code{consensus_cluster}, which will override the default shape parameters and number of iterations.
+Consensus clustering is experimental, but can be enabled by setting \code{consensus_cluster=TRUE}. Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to the sigmoid function \eqn{(1+\exp{(-s(w-\frac{1}{2})})^{-1}}, where \eqn{w} is the original weight and \eqn{s} is the shape parameter.
+
+By default, this runs nine times for shape parameters \code{c(0,0.2,0.4,0.6,0.8,1.0,1.33,1.67,2.0)}, collapsing weights below 0.1 to zero. The resulting clusters form a network such that the edge weight between any two nodes connected in the initial graph is the proportion of clusters they shared over clustering runs. This network is used for a final label propagation run, which identifies the consensus clusters. Users can specify a numeric vector as input to \code{consensus_cluster}, which will override the default shape parameters and number of iterations.
 }
 
 \value{
 Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has three entries, \code{parameters}, \code{graph_stats}, and \code{results}.
 
-\code{parameters} is a named vector with the values of \code{add_self_loops}, \code{attenuation}, and \code{iterations} used for the clustering.
+\code{parameters} is a named vector with the values of \code{add_self_loops}, \code{attenuation}, \code{dist_scaling}, and \code{iterations} used for the clustering.
 
 \code{graph_stats} is a named numeric vector containing the number of nodes and edges in the input graph.
 
@@ -144,9 +157,9 @@ Leung, X.Y.I., et al., \emph{Towards real-time community detection in large netw
 Aidan Lakshman <AHL27@pitt.edu>
 }
 \section{Warning}{
-While this algorithm can scale to very large graphs, it does have some internal limitations. First, nodes must be comprised of no more than 254 characters. This limitation is provided to decrease memory overhead and improve runtime. This behavior is controlled by the definition of \code{MAX_NODE_NAME_SIZE} in \code{src/OnDiskLP.c}.
+While this algorithm can scale to very large graphs, it does have some internal limitations. First, nodes must be comprised of no more than 255 characters. This limitation is provided to decrease memory overhead and improve runtime. This behavior is controlled by the definition of \code{MAX_NODE_NAME_SIZE} in \code{src/OnDiskLP.c}.
 
-Second, nodes are indexed using 54-bit unsigned integers. This means that the maximum possible number of nodes available is \eqn{2^{54}-1}, which is about 1.8 quadrillion. This is because ExoLabel compresses weights and node labels into a single 64-bit integer to decrease disk consumption during sorting. Weights are rescaled to a 0-1 range and then mapped to 10-bit integers. This means the maximum representable difference between two weights is \eqn{\frac{d}{1024} \approx 0.001d}, where \eqn{d} is the difference between the maximum and minimum edge weight in the input network. This behavior is controlled by \code{BITS_FOR_WEIGHT} in \code{src/OnDiskLP.c}, which determines how many bits are allocated for weights. More bits allows for higher precision, but reduces the maximum number of allowable nodes.
+Second, nodes are indexed using 44-bit unsigned integers. This means that the maximum possible number of nodes available is \eqn{2^{40}-1}, which is about 17.5 trillion. This is because ExoLabel compresses weights and node labels into a single 64-bit integer to decrease disk consumption during sorting. Weights are rescaled with \eqn{w'=log_2(w+1)}, and the resulting value is transformed into a floating point number with a 16-bit mantissa and 4-bit exponent. This representation maintains a maximum error in precision of less than 0.05\%, but does result in absolute errors getting larger as weights increase in size. For a point of reference, the error in representation is less than 0.00004 for weights in [0,1] and less than 10.5 for weights in [65,000, 70,000]. This error should be undetectable outside of extremely niche scenarios.
 
 Third, this algorithm uses disk space to store large objects. As such, please ensure you have sufficient disk space for the graph you intend to process. While there are safeguards in the code itself, unhandleable errors can occur when the OS runs out of space. Use \code{\link{EstimateExoLabel}} to estimate the disk consumption of your graph, and see "Memory Consumption" for more details on how the total disk/memory consumption is calculated. Note that using \code{use_fast_sort=TRUE} will double the maximal disk consumption of the algorithm.
 }
