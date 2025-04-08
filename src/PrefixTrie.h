@@ -34,9 +34,6 @@ typedef struct prefix {
 } prefix;
 
 prefix *initialize_trie(void);
-leaf *find_node_for_prefix(char *s, prefix *trie);
-trie_uint insert_into_trie(char *s, prefix *trie, trie_uint ctr, trie_uint to_add);
-trie_uint find_index_for_prefix(char *s, prefix *trie);
-void get_trie_child_data(prefix *node, trie_uint *index, trie_uint *count);
+trie_uint find_index_for_prefix_and_increment(char *s, prefix *trie, trie_uint* ctr, int should_increment);
 void free_trie(prefix *trie);
 #endif
