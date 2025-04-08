@@ -110,24 +110,15 @@ static const char CONSENSUS_CSRCOPY1[] = "tmpcsr1";
 static const char CONSENSUS_CLUSTER[] = "tmpclust";
 
 /*
- * Using a 4.12 fixed-point float representation for weight compression
- * this allows 64-16 = 48 bits for index, which is up to ~281 trillion nodes
- * Integer part is bounded by the x integral bits (2^4 = 0-15)
- * Granularity is bounded by (1/2)^y, with y the lower bits
- *    In this case, (1/2)^12 = 1/4096 = 0.00024
- * Note that log2(1+1.000) - log2(1+0.999) = 0.00072 > 0.00024
- * So we have at least 3 digits of precision in the range x = [0-1]
- *    (slope of log2(x+1) is decreasing on [0-1] so this is a lower bound)
- * Some stats:
- *  - Range of representable numbers: [0, 65523.91016]
- *  - Maximum error in seq(0,1,0.001): 0.00035
- *  - Error near 65,000 is about 10 (0.01%)
+ * Constants for weight compression, see compressEdgeWeights for details
  */
 static const int BITS_FOR_WEIGHT = 16;
-static const int BITS_AFTER_DECIMAL = 12;
-static const l_uint MAX_NUM_NODES = (1ULL << (64-BITS_FOR_WEIGHT)) - 1;
+static const int BITS_FOR_EXP = 4;
+
+// don't touch, values auto-determined from above constants
+static const l_uint MAX_NUM_NODES = (1ULL << (64-(BITS_FOR_WEIGHT+BITS_FOR_EXP))) - 1;
 static const l_uint MAX_POSSIBLE_WEIGHT = (1ULL << BITS_FOR_WEIGHT) - 1;
-static const double COMPRESSED_CONVERTER = 1ULL << BITS_AFTER_DECIMAL;
+static const l_uint MAX_POSSIBLE_EXPONENT = (1ULL << BITS_FOR_EXP) - 1;
 
 enum VERBOSITY {
   VERBOSE_NONE = 0,   // no output
@@ -297,10 +288,10 @@ static void report_time(time_t time1, time_t time2, const char* prefix){
   mins = elapsed_secs / 60;
 
   Rprintf("%sTime difference of ", prefix);
-  if(days) Rprintf("%d day(s), ", days);
-  if(hours) Rprintf("%d hr(s), ", hours);
-  if(mins) Rprintf("%d min(s), ", mins);
-  Rprintf("%d sec(s)\n", secs);
+  if(days) Rprintf("%d day%s, ", days, days==1 ? "" : "s");
+  if(hours) Rprintf("%d hr%s, ", hours, hours==1 ? "" : "s");
+  if(mins) Rprintf("%d min%s, ", mins, mins==1 ? "" : "s");
+  Rprintf("%d sec%s\n", secs, secs==1 ? "" : "s");
   return;
 }
 
@@ -322,8 +313,9 @@ static void report_filesize(l_uint bytes){
 static void print_graph_stats(l_uint num_v, l_uint num_e){
   l_uint vals[] = {num_v, num_e};
   l_uint divisor;
-  int to_print, first_val;
+  int to_print, first_val, is_really_big;
   for(int i=0; i<2; i++){
+    is_really_big = vals[i] >= (1000000000 * (vals[i] ? 1 : 10));
     if(i == 0)
       Rprintf("Total Vertices: ");
     else
@@ -342,9 +334,9 @@ static void print_graph_stats(l_uint num_v, l_uint num_e){
     }
     to_print = vals[i];
     if(first_val){
-        Rprintf("%d\n", to_print);
+        Rprintf("%d%s\n", to_print, is_really_big ? " (WOW!)" : "");
         first_val = 0;
-    } else Rprintf("%03d\n", to_print);
+    } else Rprintf("%03d%s\n", to_print, is_really_big ? " (WOW!)" : "");
   }
 }
 
@@ -378,10 +370,23 @@ static inline float sigmoid_transform(const float w, const double slope){
 
 static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
   /*
-   * Using 4.12 compression for weights and 48-bit representation for v2
-   * See line 103 for an explanation of how these were chosen.
+   * Using a compressed representation for weight
+   * BITS_FOR_WEIGHT determines the number of bits for the value
+   * BITS_FOR_EXP the number of bits for the exponent.
+   * The compression follows the following algorithm:
+   *  1. Transform each weight w with w' = log2(1+w).
+   *  2. Record the position of the leading bit of the integer part, M
+   *      Note M = min(M, 1ULL << BITS_FOR_EXP)
+   *  3. Right-shift w' by (BITS_FOR_WEIGHT - M)
+   *      (multiply by (1ULL << (BITS_FOR_WEIGHT - M)))
+   *  4. Store the value in the lower [BITS_FOR_WEIGHT] bits
    *
-   * Note that weights are guaranteed to be positive
+   * Note that weights are guaranteed to be positive.
+   * Performance:
+   * - Maximum error of 0.00004 for seq(0,1,0.001)
+   * - Maximum error of around 10 for >60,000 (~0.01%)
+   * - Basically unbounded range of values
+   * - Absolute error goes up a lot as we increase, but typically not more than 0.05%
    */
   if(v2 > MAX_NUM_NODES){
     cleanup_ondisklp_global_values();
@@ -389,16 +394,27 @@ static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
   }
   edge e;
   e.v = v1;
+
+  // left shift the index out of the range used for the weight
   l_uint v2_comp = v2;
-  v2_comp <<= BITS_FOR_WEIGHT;
+  v2_comp <<= (BITS_FOR_WEIGHT + BITS_FOR_EXP);
 
+  // 1. transform the weight into log2(w+1)
   weight = log2(weight+1);
-  weight *= COMPRESSED_CONVERTER;
+  if(weight > MAX_POSSIBLE_WEIGHT) weight = MAX_POSSIBLE_WEIGHT;
 
-  l_uint w_comp = weight > MAX_POSSIBLE_WEIGHT ? MAX_POSSIBLE_WEIGHT : floor(weight);
-  w_comp = w_comp & MAX_POSSIBLE_WEIGHT;
+  // 2. get the position of the leading bit
+  uint32_t to_shift = MAX_POSSIBLE_EXPONENT - get_msb32((uint32_t)floor(weight));
+  if(to_shift < 0) to_shift = 0;
 
-  e.w = v2_comp | w_comp;
+  // 3. right-shift w' by (BITS_FOR_WEIGHT - M)
+  weight *= (1ULL << to_shift);
+
+  // mask the values to make sure they're in the right position
+  l_uint w_comp = ((l_uint)floor(weight)) & MAX_POSSIBLE_WEIGHT;
+  to_shift = (to_shift & MAX_POSSIBLE_EXPONENT) << BITS_FOR_WEIGHT;
+
+  e.w = v2_comp | to_shift | w_comp;
   return e;
 }
 
@@ -412,11 +428,15 @@ static void decompressEdgeValue(l_uint compressed, l_uint *v2, w_float *w){
 
   // get the weight in compressed form
   double w_comp = (double) ((l_uint)(compressed & MAX_POSSIBLE_WEIGHT));
-  w_comp /= COMPRESSED_CONVERTER;
+
+  // get the exponent that we shifted by
+  uint32_t bits_shifted = (compressed >> BITS_FOR_WEIGHT) & MAX_POSSIBLE_EXPONENT;
+
+  w_comp /= (1ULL << bits_shifted);
   w_comp = pow(2, w_comp) - 1;
 
   *w = (w_float)w_comp;
-  *v2 = compressed >> BITS_FOR_WEIGHT;
+  *v2 = compressed >> (BITS_FOR_WEIGHT + BITS_FOR_EXP);
 
   return;
 }
