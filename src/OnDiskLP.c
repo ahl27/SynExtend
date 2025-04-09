@@ -1899,16 +1899,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   base_iter = ((aq_int)(1)) << num_bits;
   base_iter = base_iter > max_degree ? max_degree : base_iter;
   base_iter = base_iter < 5 ? 5 : base_iter; // minimum of 5 iterations per node
-  int filled_iter = 0;
-
-  for(int i=0; i<num_ofiles; i++){
-    if(num_iter[i] == 0){
-      num_iter[i] = base_iter;
-      filled_iter = 1;
-    }
-  }
-  if(filled_iter && verbose >= VERBOSE_BASIC)
-    Rprintf("\tAutomatically setting zero-value iterations to %d\n", base_iter);
 
   // sort the file and split it into neighbor and weight
   if(FILE_READ_CACHE_SIZE < num_edges){
@@ -1940,6 +1930,11 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   char write_buffer[PATH_MAX];
   for(int i=0; i<num_ofiles; i++){
     reset_trie_clusters(num_v);
+    if(num_iter[i] == 0){
+      if(verbose >= VERBOSE_BASIC)
+        Rprintf("\tAutomatically setting iterations to %d (was 0)\n", base_iter);
+      num_iter[i] = base_iter;
+    }
     time1 = time(NULL);
     if(consensus_len){
       consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
