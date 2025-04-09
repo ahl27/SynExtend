@@ -315,7 +315,7 @@ static void print_graph_stats(l_uint num_v, l_uint num_e){
   l_uint divisor;
   int to_print, first_val, is_really_big;
   for(int i=0; i<2; i++){
-    is_really_big = vals[i] >= (1000000000 * (vals[i] ? 1 : 10));
+    is_really_big = vals[i] >= (1000000000ULL * (vals[i] ? 1 : 1000));
     if(i == 0)
       Rprintf("Total Vertices: ");
     else
