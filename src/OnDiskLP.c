@@ -1802,12 +1802,161 @@ static l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *cl
   return num_v;
 }
 
+/***********/
+/* TESTING */
+/***********/
+
+/*
+ * These functions must be included here because most ExoLabel methods are static
+ * These methods should allow validation of everything in here from R.
+ */
+
+/*
+ * DISJOINT SETS
+ */
+
+static inline l_uint get_dsu_rep(l_uint* reps, l_uint v){
+  if(reps[v] != v) reps[v] = get_dsu_rep(reps, reps[v]);
+  return reps[v];
+}
+
+static void merge_dsu_sets(l_uint *reps, l_uint *sizes, int v1, int v2){
+  l_uint key1 = get_dsu_rep(reps, v1);
+  l_uint key2 = get_dsu_rep(reps, v2);
+  if(key1 == key2) return;
+  if(sizes[key1] > sizes[key2]){
+    l_uint tmp = key1;
+    key1 = key2;
+    key2 = tmp;
+  }
+  reps[key1] = key2;
+  sizes[key2] += sizes[key1];
+  return;
+}
+
+static SEXP find_disjoint_sets(l_uint num_v, const double cutoff,
+                              const char* edges_file, const char* weights_file){
+  l_uint* sets = safe_malloc(sizeof(l_uint) * num_v);
+  l_uint* sizes = safe_malloc(sizeof(l_uint) * num_v);
+  FILE *efile = safe_fopen(edges_file, "rb");
+  FILE *wfile = safe_fopen(weights_file, "rb");
+
+  for(l_uint i = 0; i < num_v; i++){
+    sets[i] = i;
+    sizes[i] = 1;
+  }
+
+  l_uint start, nedges, buf_size = 0;
+  l_uint *indices = NULL;
+  w_float *weights = NULL;
+  for(l_uint i=0; i<num_v; i++){
+    start = GLOBAL_all_leaves[i]->edge_start;
+    nedges = GLOBAL_all_leaves[i+1]->edge_start - start;
+    if(nedges == 0) continue;
+    if(buf_size < nedges){
+      indices = safe_realloc(indices, nedges*L_SIZE);
+      weights = safe_realloc(weights, nedges*W_SIZE);
+      buf_size = nedges;
+    }
+    fseek(efile, start*L_SIZE, SEEK_SET);
+    fseek(wfile, start*W_SIZE, SEEK_SET);
+    safe_fread(indices, L_SIZE, nedges, efile);
+    safe_fread(weights, W_SIZE, nedges, wfile);
+    for(l_uint j=0; j<nedges; j++)
+      if(weights[j] >= cutoff)
+        merge_dsu_sets(sets, sizes, i, indices[j]);
+  }
+
+  if(indices) free(indices);
+  if(weights) free(weights);
+
+  // this will compress all paths to their final value
+  l_uint num_disjoint_sets = 0;
+  for(l_uint i=0; i<num_v; i++){
+    if(get_dsu_rep(sets, i) != i)
+      sizes[i] = 0;
+    else
+      num_disjoint_sets++;
+  }
+  SEXP groups = PROTECT(allocVector(REALSXP, num_disjoint_sets));
+  double* to_return = REAL(groups);
+  for(l_uint i=0; i<num_v; i++)
+    if(sizes[i])
+      to_return[--num_disjoint_sets] = (double)sizes[i];
+
+  free(sets);
+  free(sizes);
+  fclose_tracked(2);
+  return groups;
+}
+
+static SEXP validate_read_weights(const char* neighbor, l_uint expected_edges, int is_undirected){
+  FILE *f = safe_fopen(neighbor, "rb");
+  SEXP all_w = PROTECT(allocVector(REALSXP, expected_edges));
+  double* result = REAL(all_w);
+  edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE));
+  l_uint v;
+  w_float w;
+  l_uint nread = FILE_READ_CACHE_SIZE;
+  l_uint total_read = 0;
+  while(nread == FILE_READ_CACHE_SIZE){
+    nread = fread(buf, sizeof(edge), FILE_READ_CACHE_SIZE, f);
+    for(int i=0; i<nread; i++){
+      decompressEdgeValue(buf[i].w, &v, &w);
+      result[total_read++] = w;
+    }
+  }
+  fclose_tracked(1);
+  free(buf);
+
+  return all_w;
+}
+
+static SEXP validate_node_degree(l_uint num_v){
+  SEXP all_degrees = PROTECT(allocVector(REALSXP, num_v));
+  double* degs = REAL(all_degrees);
+  l_uint tmp;
+  for(l_uint i=0; i<num_v; i++){
+    tmp = GLOBAL_all_leaves[i+1]->edge_start - GLOBAL_all_leaves[i]->edge_start;
+    degs[i] = (double)tmp;
+  }
+  return all_degrees;
+}
+
+static void validate_edgefile_is_sorted(const char* neighbor, const l_uint expected_edges){
+  // this function validates file contents after edges are sorted but before split
+  FILE *f = safe_fopen(neighbor, "rb");
+  edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE+1));
+  buf[0].v = 0;
+
+  l_uint nread = FILE_READ_CACHE_SIZE;
+  l_uint total_read = 0;
+  while(nread == FILE_READ_CACHE_SIZE){
+    if(total_read > 0)
+      buf[0].v = buf[FILE_READ_CACHE_SIZE].v;
+    nread = fread(buf+1, sizeof(edge), FILE_READ_CACHE_SIZE, f);
+    for(int i=1; i<=nread; i++){
+      if(buf[i].v < buf[i-1].v) error("Edgefile is improperly sorted!\n");
+    }
+    total_read += nread;
+  }
+  fclose_tracked(1);
+  free(buf);
+  if(total_read != expected_edges){
+    error("Wrong number of edges! Expected %" lu_fprint ", read %" lu_fprint ".\n",
+      expected_edges, total_read);
+  }
+  return;
+}
+
+
 SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILES,  // more files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
                     SEXP IGNORE_WEIGHTS, SEXP CONSENSUS_WEIGHTS,
-                    SEXP SORT_INPLACE, SEXP ATTEN_POWER, SEXP DIST_POWER){
+                    SEXP SORT_INPLACE, SEXP ATTEN_POWER, SEXP DIST_POWER,
+                    SEXP TESTING){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1857,6 +2006,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
   const double* atten_power = REAL(ATTEN_POWER);
   const double* dist_power = REAL(DIST_POWER);
+  const int debug = LOGICAL(TESTING)[0];
 
   // consensus stuff
   const int consensus_len = length(CONSENSUS_WEIGHTS);
@@ -1904,12 +2054,27 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   for(l_uint i=0; i<=num_v; i++){
     leaf* tmp_leaf = GLOBAL_all_leaves[i];
     if(tmp_leaf->count > max_degree) max_degree = tmp_leaf->count;
+    if(running_sum > num_edges)
+      error("Offsets incorrect: node %" lu_fprint
+            " has offset %" lu_fprint "(only %"
+            lu_fprint " edges total!)\n",
+            i, running_sum, num_edges);
     tmp_leaf->edge_start = running_sum;
     running_sum += tmp_leaf->count;
     // trie clusters are reset later, no need to reset them here
   }
   if(verbose >= VERBOSE_ALL)
     Rprintf("\tMaximum node degree is %" lu_fprint "!\n", max_degree);
+
+  SEXP debug_weights, debug_degrees;
+  if(debug){
+    if(verbose >= VERBOSE_BASIC) Rprintf("Recording node degrees...");
+    debug_degrees = validate_node_degree(num_v);
+    if(verbose >= VERBOSE_BASIC) Rprintf("done!\n");
+    if(verbose >= VERBOSE_BASIC) Rprintf("Recording edge weights...");
+    debug_weights = validate_read_weights(neighborfile, GLOBAL_all_leaves[num_v]->edge_start, is_undirected);
+    if(verbose >= VERBOSE_BASIC) Rprintf("done!\n");
+  }
 
   // get base number of iterations
   max_degree = (l_uint)(sqrt((double)max_degree));
@@ -1939,10 +2104,24 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     }
   }
 
+  if(debug){
+    if(verbose >= VERBOSE_BASIC) Rprintf("Validating edges are sorted correctly...");
+    validate_edgefile_is_sorted(neighborfile,  GLOBAL_all_leaves[num_v]->edge_start);
+    if(verbose >= VERBOSE_BASIC) Rprintf("passed!\n");
+  }
+
   split_sorted_file(neighborfile, weightsfile, num_edges, verbose);
   time2 = time(NULL);
 
   if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
+
+  SEXP debug_disjoint_sizes;
+  if(debug){
+    if(verbose >= VERBOSE_BASIC) Rprintf("Recording disjoint sets...");
+    debug_disjoint_sizes = find_disjoint_sets(num_v, self_loop_weights[0],
+                                            neighborfile, weightsfile);
+    if(verbose >= VERBOSE_BASIC) Rprintf("done!\n");
+  }
 
   char vert_name_holder[MAX_NODE_NAME_SIZE];
   char write_buffer[PATH_MAX];
@@ -1988,9 +2167,20 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   remove(neighborfile);
   cleanup_ondisklp_global_values();
 
+
   SEXP RETURN_VAL = PROTECT(allocVector(REALSXP, 2));
   REAL(RETURN_VAL)[0] = num_v;
   REAL(RETURN_VAL)[1] = num_edges;
+
+  if(debug){
+    SEXP LIST_VAL = PROTECT(allocVector(VECSXP, 4));
+    SET_VECTOR_ELT(LIST_VAL, 0, RETURN_VAL);
+    SET_VECTOR_ELT(LIST_VAL, 1, debug_weights);
+    SET_VECTOR_ELT(LIST_VAL, 2, debug_degrees);
+    SET_VECTOR_ELT(LIST_VAL, 3, debug_disjoint_sizes);
+    UNPROTECT(5);
+    return LIST_VAL;
+  }
   UNPROTECT(1);
   return RETURN_VAL;
 }

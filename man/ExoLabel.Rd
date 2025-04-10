@@ -74,7 +74,7 @@ Logical; determines if status messages (output, progress, etc.) should be displa
 }
 
 \item{sep}{
-Character; expected character that separates entries on a line in each file in \code{edgelistfiles}. Defaults to tab, as would be expected in a \code{.tsv} formatted file. Set to \code{','} for a \code{.csv} file.
+Character; expected character that separates entries on a line in each file in \code{edgelistfiles}. Defaults to tab, as would be expected in a \code{.tsv} formatted file. Set to \code{','} for a \code{.csv} file. Also determines the separator used in the output table.
 }
 \item{tempfiledir}{
 Character; vector corresponding to the location where temporary files used during execution should be stored. These temporary files are deleted after ExoLabel finishes running.
@@ -175,7 +175,7 @@ Third, this algorithm uses disk space to store large objects. As such, please en
 
   As for disk space, ExoLabel transforms the graph into a CSR-compressed network, which is split across two files: a neighbors list, and a weights list. CSR compressions also require an index, which is stored directly in the trie structure. The two files consume a total of 12 bytes per outgoing edge, for a total disk consumption of \eqn{12vd} bytes. However, the initial reading of the edges requires 16 bytes per edge, resulting in a maximum disk consumption of \eqn{16dv}. If \code{use_fast_sort=TRUE}, this edge reading maximally consumes 32 bytes per edge (a maximum disk consumption of \eqn{32dv}). Note that undirected edges are stored as two directed edges, which doubles the disk consumption.
 
-  The final table returned is a tab-separated table containing vertex names and cluster numbers in human-readable format. Each line consumes at most \eqn{l + 2 + \log_{10}{v}} bytes. In the worst case, the number of clusters is equal to the number of vertices, which have at most \eqn{\log_{10}{v}} digits. The average number of digits is close to the number of digits of the largest number due to how the number of digits scales with numbers. The extra two bytes are for the tab and newline characters. Thus, the total size of the file is at most \eqn{(2+l+\log_{10}{v})v} bytes. We remove all intermediate files prior to outputting clusters, so in practical cases this should be smaller than intermediate disk consumption.
+  The final table returned contains vertex names and cluster numbers in human-readable format. Each line is of the format \code{VERTEX<sep>CLUSTER}, where \code{<sep>} is the argument passed to \code{sep}. Each line consumes at most \eqn{l + 2 + \log_{10}{v}} bytes. In the worst case, the number of clusters is equal to the number of vertices, which have at most \eqn{\log_{10}{v}} digits. The average number of digits is close to the number of digits of the largest number due to how the number of digits scales with numbers. The extra two bytes are for the sep and newline characters. Thus, the total size of the file is at most \eqn{(2+l+\log_{10}{v})v} bytes. We remove all intermediate files prior to outputting clusters, so in practical cases this should be smaller than intermediate disk consumption.
 }
 
 \examples{

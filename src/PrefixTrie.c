@@ -135,8 +135,10 @@ trie_uint find_index_for_prefix_and_increment(char *s, prefix *trie, trie_uint* 
 	// this function does three things:
 	// 1. insert string into trie if it doesn't exist
 	leaf *node = find_node_for_prefix(s, trie);
-	if(!node->count)
+	if(!node->edge_start){
 		node->index = (*ctr)++;
+		node->edge_start = 1;
+	}
 	// 2. increment the in-degree of the node if incoming edge
 	if(should_increment) node->count++;
 	// 3. return the node's index
