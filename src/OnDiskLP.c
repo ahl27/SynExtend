@@ -1883,15 +1883,17 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
 
   // change edge_start values to cumulative counts
   GLOBAL_all_leaves[num_v] = malloc(sizeof(leaf));
+  GLOBAL_all_leaves[num_v]->count = 0;
   GLOBAL_all_leaves[num_v]->edge_start = 0;
   l_uint running_sum = 0;
   for(l_uint i=0; i<=num_v; i++){
     leaf* tmp_leaf = GLOBAL_all_leaves[i];
     if(tmp_leaf->count > max_degree) max_degree = tmp_leaf->count;
+    tmp_leaf->edge_start = running_sum;
     running_sum += tmp_leaf->count;
-    tmp_leaf->edge_start = running_sum - tmp_leaf->edge_start;
     // trie clusters are reset later, no need to reset them here
   }
+  error("stop before things go wrong.");
 
   // get base number of iterations
   max_degree = (l_uint)(sqrt((double)max_degree));
