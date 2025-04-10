@@ -62,7 +62,7 @@ Logical; determines how the result of clustering is returned. If \code{FALSE} (d
 }
 
 \item{consensus_cluster}{
-Logical or Numeric; determines if consensus clustering should be used. If \code{TRUE}, runs the clustering algorithm nine times across varying parameters and forms a consensus clustering based on the agreement of each run. Can be set to a numeric vector to control the number of clusterings. See "Consensus Clustering" below for more information.
+Logical or Numeric; determines if consensus clustering should be used. \bold{Currently disabled, but will be available in the next release.} If \code{TRUE}, runs the clustering algorithm nine times across varying parameters and forms a consensus clustering based on the agreement of each run. Can be set to a numeric vector to control the number of clusterings. See "Consensus Clustering" below for more information.
 }
 
 \item{use_fast_sort}{
@@ -129,7 +129,10 @@ Note that the order to process each node is randomly initialized, so multiple ru
 }
 
 \section{Consensus Clustering}{
-Consensus clustering is experimental, but can be enabled by setting \code{consensus_cluster=TRUE}. Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to the sigmoid function \eqn{(1+\exp{(-s(w-\frac{1}{2})})^{-1}}, where \eqn{w} is the original weight and \eqn{s} is the shape parameter.
+Consensus clustering is not yet available, but will be enabled in the next release.
+
+%Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}.
+Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to the sigmoid function \eqn{(1+\exp{(-s(w-\frac{1}{2})})^{-1}}, where \eqn{w} is the original weight and \eqn{s} is the shape parameter.
 
 By default, this runs nine times for shape parameters \code{c(0,0.2,0.4,0.6,0.8,1.0,1.33,1.67,2.0)}, collapsing weights below 0.1 to zero. The resulting clusters form a network such that the edge weight between any two nodes connected in the initial graph is the proportion of clusters they shared over clustering runs. This network is used for a final label propagation run, which identifies the consensus clusters. Users can specify a numeric vector as input to \code{consensus_cluster}, which will override the default shape parameters and number of iterations.
 }
