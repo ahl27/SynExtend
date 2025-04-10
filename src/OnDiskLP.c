@@ -1893,7 +1893,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     running_sum += tmp_leaf->count;
     // trie clusters are reset later, no need to reset them here
   }
-  error("stop before things go wrong.");
 
   // get base number of iterations
   max_degree = (l_uint)(sqrt((double)max_degree));
