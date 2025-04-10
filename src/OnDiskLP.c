@@ -596,6 +596,8 @@ static int leaf_index_compar(const void *a, const void *b){
   return (aa > bb) - (aa < bb);
 }
 
+/*
+ * Old comparator function in case this functionality is someday needed
 static int edge_compar(const void *a, const void *b){
   // sort edges by INCREASING index, breaking ties by DECREASING weight
   const edge aa = *(const edge *)a;
@@ -613,6 +615,17 @@ static int edge_compar(const void *a, const void *b){
     if(cmp == 0) cmp = (v1 > v2) - (v1 < v2);
   }
 
+  return cmp;
+}
+*/
+
+static int fast_edge_compar(const void *a, const void *b){
+  // skipping the decompression step to just directly sort
+  // this sorts by increasing index 1 -> increasing index 2 -> undefined weight order
+  const edge aa = *(const edge *)a;
+  const edge bb = *(const edge *)b;
+  int cmp = (aa.v > bb.v) - (aa.v < bb.v);
+  if(cmp == 0) cmp = (aa.w > bb.w) - (aa.w < bb.w);
   return cmp;
 }
 
@@ -1273,7 +1286,7 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
     c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
     if((GLOBAL_cachectr+is_undirected) >= FILE_READ_CACHE_SIZE || (is_final_file && feof(edgelist) && !remaining)){
       // sort the block and write it to the neighbors file
-      qsort(GLOBAL_readedges, GLOBAL_cachectr, sizeof(edge), edge_compar);
+      qsort(GLOBAL_readedges, GLOBAL_cachectr, sizeof(edge), fast_edge_compar);
       nedges += safe_fwrite(GLOBAL_readedges, sizeof(edge), GLOBAL_cachectr, neighbortable);
       GLOBAL_cachectr = 0;
     }
@@ -1879,7 +1892,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(verbose >= VERBOSE_BASIC) Rprintf("Tidying up internal tables...\n");
   l_uint print_val = 0;
   reindex_trie_and_write_counts(GLOBAL_trie, 0, verbose, &print_val);
-  // final print in reindex_trie_and_write_counts is \r
+  // final print in reindex_trie_and_write_counts is \r, need a newline
   if(verbose >= VERBOSE_ALL) Rprintf("\n");
 
   l_uint max_degree = 0;
@@ -1914,7 +1927,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                                   MERGE_INPUT_SIZE,
                                   MAX_BINS_FOR_MERGE, // bins to merge with
                                   MERGE_OUTPUT_SIZE, // size of output buffer
-                                  edge_compar, verbose);
+                                  fast_edge_compar, verbose);
     } else {
       kway_mergesort_file(neighborfile, weightsfile,
                                   num_edges, sizeof(edge),
@@ -1922,7 +1935,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                                   MERGE_INPUT_SIZE,
                                   MAX_BINS_FOR_MERGE, // bins to merge with
                                   MERGE_OUTPUT_SIZE, // size of output buffer
-                                  edge_compar, verbose);
+                                  fast_edge_compar, verbose);
     }
   }
 
