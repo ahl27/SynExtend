@@ -2050,7 +2050,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   l_uint print_val = 0;
   reindex_trie_and_write_counts(GLOBAL_trie, 0, verbose, &print_val);
   // final print in reindex_trie_and_write_counts is \r, need a newline
-  if(verbose >= VERBOSE_ALL) Rprintf("\n");
+  if(verbose >= VERBOSE_ALL) Rprintf("\tProcessed %" lu_fprint " vertices\n", print_val);
 
   l_uint max_degree = 0;
   // change edge_start values to cumulative counts
