@@ -1879,8 +1879,10 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   if(verbose >= VERBOSE_BASIC) Rprintf("Tidying up internal tables...\n");
   l_uint print_val = 0;
   reindex_trie_and_write_counts(GLOBAL_trie, 0, verbose, &print_val);
-  l_uint max_degree = 0;
+  // final print in reindex_trie_and_write_counts is \r
+  if(verbose >= VERBOSE_ALL) Rprintf("\n");
 
+  l_uint max_degree = 0;
   // change edge_start values to cumulative counts
   GLOBAL_all_leaves[num_v] = malloc(sizeof(leaf));
   GLOBAL_all_leaves[num_v]->count = 0;
@@ -1893,6 +1895,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     running_sum += tmp_leaf->count;
     // trie clusters are reset later, no need to reset them here
   }
+  if(verbose >= VERBOSE_ALL)
+    Rprintf("\tMaximum node degree is %" lu_fprint "!\n", max_degree);
 
   // get base number of iterations
   max_degree = (l_uint)(sqrt((double)max_degree));
