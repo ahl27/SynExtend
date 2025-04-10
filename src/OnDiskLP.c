@@ -2126,6 +2126,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   char vert_name_holder[MAX_NODE_NAME_SIZE];
   char write_buffer[PATH_MAX];
   for(int i=0; i<num_ofiles; i++){
+    if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
     reset_trie_clusters(num_v);
     if(num_iter[i] == 0){
       if(verbose >= VERBOSE_BASIC)
@@ -2140,7 +2141,6 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                             consensus_w, consensus_len);
 
     } else {
-      if(verbose >= VERBOSE_BASIC) Rprintf("Clustering...\n");
       cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
                     self_loop_weights[i], atten_power[i], dist_power[i]);
     }
