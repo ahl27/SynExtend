@@ -200,7 +200,7 @@ ExoLabel <- function(edgelistfiles,
   }
 
   if(length(retval) == 1) return(retval[[1]])
-  return(retval)
+  invisible(retval)
 }
 
 EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
@@ -420,7 +420,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
   TOLERANCE[TOLERANCE < 0.0001] <- 0.0001
   all_weights <- abs(all_weights - close_w)
   if(any(all_weights > TOLERANCE))
-    stop("Misread some edges: maximum error was ", max(all_weights))
+    stop("Misread some edges: maximum difference in read weight was ", max(all_weights))
   if(verbose) cat("All weights were read in correctly.\n")
 
   ## checking that disjoint sets are correct
