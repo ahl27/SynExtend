@@ -667,7 +667,7 @@ static void kway_mergesort_file_inplace(const char* f1,
   int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
-  l_uint cur_fsize, max_fsize=0;
+  l_uint cur_fsize=0, max_fsize=0;
 
   if(num_bins > (nlines / block_size)){
     num_bins = nlines/block_size + !!(nlines % block_size);
@@ -804,11 +804,15 @@ static void kway_mergesort_file_inplace(const char* f1,
 
     mergetree->nwritten = 0;
     block_size *= num_bins;
+    if(block_size >= nlines){
+      cur_fsize = ftell(fileptr);
+      if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+    }
     rewind(fileptr);
   }
   // cur_source will always be the file we just WROTE to here
 
-  if(verbose == VERBOSE_ALL){
+  if(verbose >= VERBOSE_BASIC){
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
@@ -859,7 +863,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
   int empty_bin, LT_total_bins;
   l_uint nblocks, num_iter;
   double prev_progress, cur_progress;
-  l_uint cur_fsize, max_fsize=0;
+  l_uint cur_fsize=0, max_fsize=0;
 
   if(num_bins > (nlines / block_size)){
     num_bins = nlines/block_size + !!(nlines % block_size);
@@ -991,7 +995,10 @@ static void kway_mergesort_file(const char* f1, const char* f2,
     }
     mergetree->nwritten = 0;
     block_size *= num_bins;
-
+    if(block_size >= nlines){
+      cur_fsize = ftell(file1) + ftell(file2);
+      if(cur_fsize > max_fsize) max_fsize = cur_fsize;
+    }
     fclose_tracked(2);
     tmp_swap_char = cur_source;
     cur_source = cur_target;
@@ -999,7 +1006,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
   }
   // cur_source will always be the file we just WROTE to here
 
-  if(verbose == VERBOSE_ALL){
+  if(verbose >= VERBOSE_BASIC){
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                       tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
