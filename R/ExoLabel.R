@@ -55,7 +55,7 @@ ExoLabel <- function(edgelistfiles,
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  if(consensus_cluster != FALSE || length(consensus_clustering) != 1L){
+  if(consensus_cluster != FALSE || length(consensus_cluster) != 1L){
     stop("Consensus clustering is currently disabled.")
   }
   if(return_table){
@@ -445,6 +445,6 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
           num_verts_actual, " nodes!")
   if(verbose) cat("Correct number of clusters reported.\n")
   file.remove(outfile)
-  if(!verbose) cat("All checks passed.\n")
-  return(TRUE)
+  if(verbose) cat("All checks passed.\n")
+  invisible(TRUE)
 }
