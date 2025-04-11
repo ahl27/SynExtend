@@ -22,7 +22,7 @@ RejectionBy <- function(input,
                                              "rawscore",
                                              "response"),
                         dropinappropriate = FALSE) {
-  
+  # print(criteria$fdr)
   # current overhead checking
   # function built for internal use, so no printing or progress bars
   # return an integer vector identifying rows in the data to retain
@@ -40,6 +40,7 @@ RejectionBy <- function(input,
                       "all"))) {
     stop ("method is not supported")
   }
+  # print(criteria$fdr)
   check_this <- names(criteria)[!(names(criteria) == "fdr")]
   # criteria has changed a bit and this isn't the right check to use anymore
   # print(check_this)
@@ -248,6 +249,7 @@ RejectionBy <- function(input,
     stop("not supported yet")
   } else if (method == "direct") {
     # simplest method, just rank the column the user asks for and drop based on the FDR
+    FDR <- criteria$fdr
     ranking <- order(input[, rankby],
                      decreasing = TRUE)
     rate <- cumsum(!input$response[ranking]) / seq(nrow(input))
