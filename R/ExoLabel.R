@@ -55,7 +55,7 @@ ExoLabel <- function(edgelistfiles,
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  if(consensus_cluster != FALSE || length(consensus_clustering) != 1L){
+  if(consensus_cluster != FALSE || length(consensus_cluster) != 1L){
     stop("Consensus clustering is currently disabled.")
   }
   if(return_table){
