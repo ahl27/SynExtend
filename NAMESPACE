@@ -13,7 +13,7 @@ importFrom("utils", "setTxtProgressBar", "txtProgressBar", "data", "object.size"
 importFrom("stats", "predict", "runif", "setNames", "rnorm", "optim", "kmeans", "density", "nls",
 "ppois", "pt", "pnorm", "as.dist", "fisher.test", "is.leaf", "pchisq", "rbinom", "as.dendrogram",
 ".checkMFClasses", ".getXlevels", "delete.response", "is.empty.model", "model.frame", 
-"model.matrix", "model.response", "model.weights", "na.pass", "offset", "terms")
+"model.matrix", "model.response", "model.weights", "na.pass", "offset", "terms", "glm", "lm")
 importFrom("parallel", "mclapply", "detectCores")
 importFrom("graphics", "hist", "points", "abline", "axis", "layout", "lines", "par", "text")
 importFrom("grDevices", "topo.colors", "colorRampPalette")
@@ -46,6 +46,15 @@ export(SummarizePairs)
 export(ClusterByK)
 export(ExpandDiagonal)
 export(CompetePairs)
+export(AAHitScoping)
+export(ApproximateBackground)
+export(BlockByRank)
+export(CheckAgainstReport)
+export(HitConsensus)
+export(NormVec)
+export(OneSite)
+export(RejectionBy)
+export(WithinSetCompetition)
 
 S3method(subset, 'dendrogram')
 
