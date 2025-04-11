@@ -182,8 +182,9 @@ WithinSetCompetition <- function(SynExtendObject,
       # print(length(res02))
     } else {
       # end check for checkable conflicts
-      res02 <- rep(TRUE,
-                   nrow(df1[[m1]]))
+      res02[match(x = rownames(df1[[m1]]),
+                  table = rownames(SynExtendObject))] <- rep(TRUE,
+                                                             nrow(df1[[m1]]))
       # print(length(res02))
     }
     # return(list("df" = df1[[m1]],

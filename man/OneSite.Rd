@@ -36,5 +36,9 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \code{\link{NucleotideOverlap}}, \code{\link{SummarizePairs}}, \code{\link{WithinSetCompetition}}, \code{\link{RejectionBy}}
 }
 \examples{
-#
+x <- OneSite(X = 3,
+             Bmax = 10,
+             Kd = 3)
+             
+# plot(x = 1:10, y = vapply(X = 1:10, FUN = function(x) {OneSite(X = x, Bmax = 5, Kd = 2)}, FUN.VALUE = vector(mode = "numeric", length = 1)))
 }

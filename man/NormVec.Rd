@@ -28,5 +28,5 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \code{\link{NucleotideOverlap}}, \code{\link{SummarizePairs}}, \code{\link{WithinSetCompetition}}, \code{\link{RejectionBy}}
 }
 \examples{
-#
+x <- NormVec(rnorm(n = 50, mean = 2, sd = 2))
 }
