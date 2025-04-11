@@ -445,6 +445,6 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
           num_verts_actual, " nodes!")
   if(verbose) cat("Correct number of clusters reported.\n")
   file.remove(outfile)
-  if(!verbose) cat("All checks passed.\n")
-  return(TRUE)
+  if(verbose) cat("All checks passed.\n")
+  invisible(TRUE)
 }
