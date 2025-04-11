@@ -83,6 +83,8 @@ WithinSetCompetition <- function(SynExtendObject,
                                          sep = "_"),
                                split = "_",
                                fixed = TRUE))
+  # return(list(indexmat,
+  #             pair_key))
   # indexmat <- matrix(data = as.integer(indexmat),
   #                    nrow = nrow(indexmat))
   indexdf <- data.frame("g1" = indexmat[, 1],
@@ -129,9 +131,13 @@ WithinSetCompetition <- function(SynExtendObject,
                                                 table = names(communities01))])
     # return(list("set" = current_sets,
     #             "communities01" = communities01,
-    #             "communities02" = communities02))
+    #             "communities02" = communities02,
+    #             "df" = df1[[m1]]))
+    # print(length(communities01))
+    # print(length(communities02))
     pairs_by_community <- split(x = df1[[m1]],
                                 f = communities02)
+    # print(length(pairs_by_community))
     # row names here are relative to ... 
     conflict_pairs <- pairs_by_community[vapply(X = pairs_by_community,
                                                 FUN = function(x) {
@@ -139,6 +145,7 @@ WithinSetCompetition <- function(SynExtendObject,
                                                 },
                                                 FUN.VALUE = vector(mode = "logical",
                                                                    length = 1))]
+    # print(length(conflict_pairs))
     if (length(conflict_pairs) > 0) {
       conflict_rows <- unlist(unname(lapply(X = conflict_pairs,
                                             FUN = function(x) {
@@ -148,6 +155,8 @@ WithinSetCompetition <- function(SynExtendObject,
                      length = length(conflict_pairs))
       winner <- vector(mode = "character",
                        length = length(conflict_pairs))
+      # print(length(keep))
+      # print(length(winner))
       # return a list of vectors of logicals and a vector of characters that indicates 
       # WHO won the competition
       # we can propogate these back to the original data frame based on the rownames
@@ -159,22 +168,33 @@ WithinSetCompetition <- function(SynExtendObject,
       }
       winner <- rep(winner,
                     lengths(keep))
+      # print(length(keep))
+      # print(length(winner))
+      # print(sum(lengths(winner)))
       # fill in which row knocked you out if you were knocked out
       res01[match(x = conflict_rows,
                   table = rownames(df1[[m1]]))] <- winner
       # fill in whether you were knocked out
       res02[match(x = conflict_rows,
                   table = rownames(df1[[m1]]))] <- unlist(keep)
-      
+      # print("a")
+      # print(length(res01))
+      # print(length(res02))
     } else {
       # end check for checkable conflicts
       res02 <- rep(TRUE,
                    nrow(df1[[m1]]))
+      # print(length(res02))
     }
-    df1[[m1]] <- df1[[m1]][res02, ]
+    # return(list("df" = df1[[m1]],
+    #             "r1" = res01,
+    #             "r2" = res02))
+    df1[[m1]] <- df1[[m1]][res02[match(x = rownames(df1[[m1]]),
+                                       table = rownames(SynExtendObject))], ]
     
   } # end of m1 loop
   
+  # return(df1)
   df1 <- do.call(rbind,
                  df1)
   rownames(df1) <- NULL
@@ -185,6 +205,7 @@ WithinSetCompetition <- function(SynExtendObject,
                                          sep = "_"),
                                split = "_",
                                fixed = TRUE))
+  # return(indexmat)
   # indexmat <- matrix(data = as.integer(indexmat),
   #                    nrow = nrow(indexmat))
   indexdf <- data.frame("g1" = as.integer(indexmat[, 1]),

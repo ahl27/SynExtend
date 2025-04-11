@@ -48,5 +48,6 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \code{\link{SummarizePairs}}
 }
 \examples{
-#
+data("Endosymbionts_Pairs01", package = "SynExtend")
+x <- WithinSetCompetition(Endosymbionts_Pairs01)
 }
