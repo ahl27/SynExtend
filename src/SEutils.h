@@ -96,6 +96,8 @@ long inline doubleFactorial(int n){
   return retval;
 }
 
+uint32_t get_msb32(uint32_t v);
+
 /*** Dendrapply substitutes ***/
 void rdendrapplyhelper(SEXP node, SEXP f, SEXP env);
 SEXP rdendrapply(SEXP tree, SEXP fn, SEXP env);
