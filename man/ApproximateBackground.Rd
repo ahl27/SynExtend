@@ -80,5 +80,39 @@ Nicholas Cooley \email{npc19@pitt.edu}
 \code{\link{NucleotideOverlap}}, \code{\link{SummarizePairs}}, \code{\link{FindSynteny}}
 }
 \examples{
-#
+fas <- system.file("extdata", "50S_ribosomal_protein_L2.fas", package="DECIPHER")
+dna <- readDNAStringSet(fas)
+aa <- translate(dna)
+
+s1 <- sample(x = length(dna),
+             size = 30,
+             replace = FALSE)
+s2 <- s1[1:15]
+s1 <- s1[16:30]
+
+mat1 <- DECIPHER:::.getSubMatrix("PFASUM50")
+mat2 <- DECIPHER:::.nucleotideSubstitutionMatrix(2L, -1L, 1L)
+
+aa1 <- aa2 <- alphabetFrequency(aa)
+aa1 <- aa2 <- aa1[, colnames(mat1)]
+aa1 <- aa2 <- aa1 / rowSums(aa1)
+
+nt1 <- nt2 <- alphabetFrequency(dna)
+nt1 <- nt2 <- nt1[, colnames(mat2)]
+nt1 <- nt2 <- nt1 / rowSums(nt1)
+
+x <- ApproximateBackground(p1 = s1,
+                           p2 = s2,
+                           code1 = rep(TRUE, length(s1)),
+                           code2 = rep(TRUE, length(s2)),
+                           mod1 = rep(TRUE, length(s1)),
+                           mod2 = rep(TRUE, length(s2)),
+                           aa1 = aa1,
+                           aa2 = aa2,
+                           nt1 = nt1,
+                           nt2 = nt2,
+                           register1 = seq(length(dna)),
+                           register2 = seq(length(dna)),
+                           aamat = mat1,
+                           ntmat = mat2)
 }
