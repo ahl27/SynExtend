@@ -390,7 +390,7 @@ static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
    */
   if(v2 > MAX_NUM_NODES){
     cleanup_ondisklp_global_values();
-    error("ExoLabel can only support up to %llu nodes.", MAX_NUM_NODES);
+    error("ExoLabel can only support up to %" lu_fprint " nodes.", MAX_NUM_NODES);
   }
   edge e;
   e.v = v1;
