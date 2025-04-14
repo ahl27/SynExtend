@@ -315,7 +315,7 @@ static void print_graph_stats(l_uint num_v, l_uint num_e){
   l_uint divisor;
   int to_print, first_val, is_really_big;
   for(int i=0; i<2; i++){
-    is_really_big = vals[i] >= (1000000000ULL * (vals[i] ? 1 : 1000));
+    is_really_big = vals[i] >= (1000000000ULL * (i ? 1 : 1000));
     if(i == 0)
       Rprintf("Total Vertices: ");
     else
@@ -703,7 +703,7 @@ static void kway_mergesort_file_inplace(const char* f1,
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
-      Rprintf(")  \r");
+      Rprintf(" disk space)  \r");
     } else if(verbose == VERBOSE_BASIC){
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint "\n", tmpniter, nmax_iterations);
     }
@@ -766,7 +766,7 @@ static void kway_mergesort_file_inplace(const char* f1,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
+            Rprintf(" disk space)  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -792,11 +792,7 @@ static void kway_mergesort_file_inplace(const char* f1,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
-          } else if(verbose == VERBOSE_BASIC && cur_progress == 100){
-            Rprintf("\tIteration complete (used ");
-            report_filesize(ftell(fileptr));
-            Rprintf(")\n");
+            Rprintf(" disk space)  \r");
           }
         R_CheckUserInterrupt();
       }
@@ -816,7 +812,7 @@ static void kway_mergesort_file_inplace(const char* f1,
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
-    Rprintf(")  \n");
+    Rprintf(" disk space)  \n");
   }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
@@ -900,7 +896,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                         tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
-      Rprintf(")  \r");
+      Rprintf(" disk space)  \r");
     }
     R_CheckUserInterrupt();
 
@@ -961,7 +957,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
+            Rprintf(" disk space)  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -980,12 +976,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
           Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
           report_filesize(max_fsize);
-          Rprintf(")  \r");
-        } else if(verbose == VERBOSE_BASIC && cur_progress == 100){
-          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
-                            tmpniter, nmax_iterations, cur_progress);
-          report_filesize(max_fsize);
-          Rprintf(")  \n");
+          Rprintf(" disk space)  \r");
         }
         R_CheckUserInterrupt();
       }
@@ -1010,7 +1001,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                       tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
-    Rprintf(")  \n");
+    Rprintf(" disk space)  \n");
   }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
