@@ -436,7 +436,8 @@ static void decompressEdgeValue(l_uint compressed, l_uint *v2, w_float *w){
   w_comp = pow(2, w_comp) - 1;
 
   *w = (w_float)w_comp;
-  *v2 = compressed >> (BITS_FOR_WEIGHT + BITS_FOR_EXP);
+  // this check is to simplify code if we only need the float part
+  if(v2) *v2 = compressed >> (BITS_FOR_WEIGHT + BITS_FOR_EXP);
 
   return;
 }
@@ -2132,15 +2133,19 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
       num_iter[i] = base_iter;
     }
     time1 = time(NULL);
+    // weights will be compressed and decompressed, but self_loop_weights isn't yet
+    // this could cause issues if there's a loss in precision in weights
+    w_float new_slw;
+    decompressEdgeValue(compressEdgeValues(0,0,self_loop_weights[i]).w, NULL, &new_slw);
     if(consensus_len){
       consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
-                            num_iter[i], verbose, self_loop_weights[i],
+                            num_iter[i], verbose, new_slw,
                             atten_power[i], dist_power[i],
                             consensus_w, consensus_len);
 
     } else {
       cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
-                    self_loop_weights[i], atten_power[i], dist_power[i]);
+                    new_slw, atten_power[i], dist_power[i]);
     }
     time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
