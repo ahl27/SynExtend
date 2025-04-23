@@ -118,6 +118,12 @@ WithinSetCompetition <- function(SynExtendObject,
                                 "PairSummaries")
                   return(x)
                 })
+  
+  if (Verbose) {
+    PBAR <- length(df1)
+    pBar <- txtProgressBar(style = 1)
+    tstart <- Sys.time()
+  }
   # things appear correct here
   # return(df1)
   # print(sum(vapply(X = df1,
@@ -176,7 +182,15 @@ WithinSetCompetition <- function(SynExtendObject,
     }
     df1[[m1]] <- df1[[m1]][rownames(df1[[m1]]) %in% keep, ]
     
+    if (Verbose) {
+      setTxtProgressBar(pb = pBar,
+                        value = m1 / PBAR)
+    }
   } # end of m1 loop
+  if (Verbose) {
+    close(pBar)
+    cat("initial pass complete!\n")
+  }
   
   # return(df1)
   df1 <- do.call(rbind,
@@ -219,6 +233,10 @@ WithinSetCompetition <- function(SynExtendObject,
   ph <- vector(mode = "list",
                length = length(df2))
   block_offset <- 0L
+  if (Verbose) {
+    pBar <- txtProgressBar(style = 1)
+    PBAR <- length(df1)
+  }
   # print("a")
   for (m1 in seq_along(df1)) {
     if (nrow(df2[[m1]]) > 1) {
@@ -247,7 +265,14 @@ WithinSetCompetition <- function(SynExtendObject,
     
     df1[[m1]]$Block_UID <- block_ph
     df1[[m1]]$blocksize <- blockres$absblocksize
-    # return(df1[[m1]])
+    
+    if (Verbose) {
+      setTxtProgressBar(pb = pBar,
+                        value = m1 / PBAR)
+    }
+  }
+  if (Verbose) {
+    close(pBar)
   }
   
   df1 <- do.call(rbind,
@@ -267,17 +292,11 @@ WithinSetCompetition <- function(SynExtendObject,
                          length.out = sum(w1))
   }
   
-  # return(df1)
-  # until the pair summaries class has a class file i need to do this...
-  # attrs_to_add <- attr_names[!(attr_names) %in% names(attributes(df1))]
-  # # return(list("a" = attr_names,
-  # #             "b" = attr_vals,
-  # #             "c" = attrs_to_add,
-  # #             "d" = SynExtendObject))
-  # for (m1 in seq_along(attrs_to_add)) {
-  #   attr(x = df1,
-  #        which = attrs_to_add[m1]) <- attr_vals[[attrs_to_add[m1]]]
-  # }
+  if (Verbose) {
+    cat("final pass completed!\n")
+    tend <- Sys.time()
+    print(tend - tstart)
+  }
   
   class(df1) <- c("data.frame",
                   "PairSummaries")
