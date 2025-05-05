@@ -188,9 +188,12 @@ RejectionBy <- function(input,
         # list position
         # because we're taking the ceiling here, we technically don't need to re-offset
         evalclust <- ceiling((fitasum$coefficients["Kd", "Estimate"] + 1L) * criteria$kargs$scalar)
+        print(evalclust)
+        print(length(kmc))
+        print(criteria$kargs$max)
         if (evalclust >= criteria$kargs$max) {
           warning("Evaluated clusters may be insufficient for this task.")
-          evalclust <- criteria$kargs$max
+          evalclust <- criteria$kargs$max - 1L
         }
         if (evalclust < 1L) {
           warning("scalar selection requested a number of clusters less than 2, defaulting to 2 clusterings.")
