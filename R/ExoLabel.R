@@ -46,7 +46,6 @@ ExoLabel <- function(edgelistfiles,
                           mode=c("undirected", "directed"),
                           add_self_loops=FALSE,
                           attenuation=TRUE,
-                          dist_scaling=TRUE,
                           ignore_weights=FALSE,
                           iterations=0L,
                           return_table=FALSE,
@@ -61,8 +60,7 @@ ExoLabel <- function(edgelistfiles,
   if(return_table){
     maxp <- max(length(add_self_loops),
                 length(attenuation),
-                length(iterations),
-                length(dist_scaling))
+                length(iterations))
     if(!missing(outfile)){
       warning("'outfile' will be ignored since return_table=TRUE")
     }
@@ -72,7 +70,6 @@ ExoLabel <- function(edgelistfiles,
   }
   iterations <- .safecheck_optional_integer("iterations", iterations, 32767L, TRUE, length(outfile))
   attenuation <- .safecheck_optional_numeric("attenuation", attenuation, length(outfile))
-  dist_scaling <- .safecheck_optional_numeric("dist_scaling", dist_scaling, length(outfile))
   add_self_loops <- .safecheck_optional_numeric("add_self_loops", add_self_loops, length(outfile))
 
   if(any(add_self_loops < 0)){
@@ -96,7 +93,7 @@ ExoLabel <- function(edgelistfiles,
      length(attenuation) != length(outfile) ||
      length(iterations) != length(outfile)){
       stop("If more than one outfile is provided, 'add_self_loops', 'iterations'",
-          ", 'attenuation', and 'dist_scaling' must be either the same length as 'outfile' ",
+          ", and 'attenuation' must be either the same length as 'outfile' ",
           "or length 1.")
   }
   if(!is.logical(verbose) || !is.numeric(verbose)){
@@ -177,7 +174,7 @@ ExoLabel <- function(edgelistfiles,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
                        consensus_cluster, !use_fast_sort,
-                       attenuation, dist_scaling, FALSE)
+                       attenuation, attenuation, FALSE)
   names(graph_stats) <- c("num_vertices", "num_edges")
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
@@ -186,8 +183,7 @@ ExoLabel <- function(edgelistfiles,
   for(i in seq_along(outfile)){
     param_vec <- c(add_self_loops=add_self_loops[i],
                    attenuation=attenuation[i],
-                   iterations=iterations[i],
-                   dist_scaling=dist_scaling[i])
+                   iterations=iterations[i])
     if(return_table){
       tab <- read.table(outfile[i], sep=sep)
       colnames(tab) <- c("Vertex", "Cluster")
@@ -264,7 +260,6 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                      mode=c("undirected", "directed"),
                      add_self_loops=FALSE,
                      attenuation=TRUE,
-                     dist_scaling=TRUE,
                      ignore_weights=FALSE,
                      iterations=0L,
                      consensus_cluster=FALSE,
@@ -276,13 +271,11 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
   verbose_int <- as.integer(verbose)
   maxp <- max(length(add_self_loops),
               length(attenuation),
-              length(iterations),
-              length(dist_scaling))
+              length(iterations))
   if(length(outfile) != maxp)
     outfile <- replicate(maxp, tempfile(tmpdir=tempfiledir))
   iterations <- .safecheck_optional_integer("iterations", iterations, 32767L, TRUE, length(outfile))
   attenuation <- .safecheck_optional_numeric("attenuation", attenuation, length(outfile))
-  dist_scaling <- .safecheck_optional_numeric("dist_scaling", dist_scaling, length(outfile))
   add_self_loops <- .safecheck_optional_numeric("add_self_loops", add_self_loops, length(outfile))
 
   # verify that the first few lines of each file are correct
@@ -351,7 +344,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
                        consensus_cluster, !use_fast_sort,
-                       attenuation, dist_scaling, TRUE)
+                       attenuation, attenuation, TRUE)
 
   if(verbose){
     cat('\n')
