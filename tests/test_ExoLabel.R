@@ -10,6 +10,8 @@ generate_random_graph <- function(nverts, nedges){
   data.frame(v1=labs[df[,1]], v2=labs[df[,2]], w=runif(nedges))
 }
 
+
+
 run_status_tests <- function(){
   if(!require(igraph)){
     cat("Skipping tests, igraph is not available.\n")
@@ -23,6 +25,8 @@ run_status_tests <- function(){
   cat("Small graphs:...")
   for(loop in c(0, 0.25, 0.5)){
     df <- generate_random_graph(10, 25)
+    if(any(abs(df$w - loop) < WEIGHT_TOLERANCE))
+      df$w[abs(df$w - loop) < WEIGHT_TOLERANCE] <- df$w[abs(df$w - loop) < WEIGHT_TOLERANCE] + 3*WEIGHT_TOLERANCE
     write.table(df, tf1, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
     testExo(tf1, add_self_loops=loop)
   }
@@ -31,7 +35,8 @@ run_status_tests <- function(){
   cat("Larger graphs:...")
   for(loop in c(0, 0.5)){
     df <- generate_random_graph(10000, 25000)
-    df[sample(25000,3),3] <- loop + WEIGHT_TOLERANCE
+    if(any(abs(df$w - loop) < WEIGHT_TOLERANCE))
+      df$w[abs(df$w - loop) < WEIGHT_TOLERANCE] <- df$w[abs(df$w - loop) < WEIGHT_TOLERANCE] + 3*WEIGHT_TOLERANCE
     write.table(df, tf1, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
     testExo(tf1, add_self_loops=loop)
   }
