@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <R_ext/Error.h>
-#include "SEutils.h"
+#include "../SEutils.h"
 
 // testing includes
 //#include <stdio.h>

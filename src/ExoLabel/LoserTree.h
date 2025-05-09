@@ -1,6 +1,8 @@
 #ifndef LOSERTREE_H
 #define LOSERTREE_H
 
+#include "../SEutils.h"
+
 /*
  * This is intended to be a type-unaware LoserTree (Tournament Tree)
  * implementation that supports dynamic refilling of bins for external sorting.

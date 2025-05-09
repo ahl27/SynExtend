@@ -47,8 +47,7 @@
  *    - can probably remove the `index` attribute of trie leaves
  */
 
-#include "SEutils.h"
-#include "SynExtend.h"
+#include "../SEutils.h"
 #include "PrefixTrie.h"
 #include "LoserTree.h"
 #include <time.h>
@@ -98,6 +97,9 @@
 
 // number of entries, so total consumption often multiplied by 8
 #define FILE_READ_CACHE_SIZE 8192*4
+
+// function prototype
+void cleanup_ondisklp_global_values();
 
 /*************/
 /* Constants */
