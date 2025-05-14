@@ -229,6 +229,7 @@ WithinSetCompetition <- function(SynExtendObject,
                                 "PairSummaries")
                   return(x)
                 })
+  # return(df1)
   
   ph <- vector(mode = "list",
                length = length(df2))
@@ -251,7 +252,14 @@ WithinSetCompetition <- function(SynExtendObject,
         block_ph[w1] <- block_ph[w1] + block_offset
         block_offset <- block_offset + max(block_ph)
       }
-      # print(block_offset)
+      print(block_offset)
+      print(max(block_ph))
+      if (max(block_ph) > 1e8) {
+        return(list("a" = blockres,
+                    "b" = w1,
+                    "c" = block_offset,
+                    "d" = block_ph))
+      }
     } else {
       # no blocks to add to the offset!
       blockres <- list("absblocksize" = 1L,
@@ -278,19 +286,6 @@ WithinSetCompetition <- function(SynExtendObject,
   df1 <- do.call(rbind,
                  df1)
   rownames(df1) <- NULL
-  # return(df1)
-  w1 <- df1$Block_UID == -1L
-  if (any(w1) &
-      !all(w1)) {
-    df1$Block_UID[w1] <- seq(from = max(df1$Block_UID) + 1L,
-                             by = 1,
-                             length.out = sum(w1))
-  } else if (any(w1) &
-             all(w1)) {
-    df1$Block_UID <- seq(from = 1,
-                         by = 1,
-                         length.out = sum(w1))
-  }
   
   if (Verbose) {
     cat("final pass completed!\n")
