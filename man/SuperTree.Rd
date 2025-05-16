@@ -9,7 +9,7 @@ Given a set of unrooted gene trees, creates a species tree. While this function
  also works for rooted gene trees, the resulting root may not be accurately placed.
 }
 \usage{
-SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
+SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -28,7 +28,7 @@ SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
 Logical; Determines if status messages and progress bars should be displayed while running.
 }
 
-\item{\dots}{
+\item{...}{
 Further arguments passed to \code{\link{TreeLine}}
 }
 }

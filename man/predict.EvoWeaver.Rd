@@ -10,7 +10,7 @@ matrix with some extra S3 methods to make printing cleaner.
 }
 \usage{
 \method{predict}{EvoWeaver}(object, Method='Ensemble',
-         Subset=NULL, Processors=1L,
+         Subset=NULL,
          MySpeciesTree=SpeciesTree(object, Verbose=Verbose),
          PretrainedModel="KEGG",
          NoPrediction=FALSE,
@@ -40,13 +40,6 @@ matrix with some extra S3 methods to make printing cleaner.
 
     \code{subset=rbind(c(1,2),c(1,3),c(2,3))} produces equivalent functionality to
     \code{subset=1:3}.
-  }
-  \item{Processors}{
-    Integer; Number of cores to use for methods that support multithreaded execution.
-    Setting to \code{NULL} or a negative value will use the value of
-    \code{detectCores()},
-    or one core if the number of available cores cannot be determined. See Note
-    for more information.
   }
   \item{MySpeciesTree}{
     Object of class \code{\link{dendrogram}} representing the phylogenetic relationship of all genomes in the dataset. Required for \code{Method=c('RPContextTree', 'GLDistance', 'CorrGL', 'MoransI', 'Behdenna')}. \code{'Behdenna'} requires a rooted, bifurcating tree (other values of \code{Method} can handle arbitrary trees). Note that \code{EvoWeaver} can automatically infer a species tree if initialized with \code{dendrogram} objects.
@@ -96,7 +89,7 @@ matrix with some extra S3 methods to make printing cleaner.
   \item \code{'Ensemble'}: Ensemble prediction combining individual coevolutionary predictors. See \code{Note} below.
   \item \code{'PhylogeneticProfiling'}: All \link[=EvoWeaver-PPPreds]{Phylogenetic Profiling Algorithms} used in the EvoWeaver manuscript.
   \item \code{'PhylogeneticStructure'}: All \link[=EvoWeaver-PSPreds]{EvoWeaver Phylogenetic Structure Methods}
-  \item \code{'GeneOrganization'}: All \link[=EvoWeaver-PSPreds]{EvoWeaver Gene Organization Methods}
+  \item \code{'GeneOrganization'}: All \link[=EvoWeaver-GOPreds]{EvoWeaver Gene Organization Methods}
   \item \code{'SequenceLevel'}: All \link[=EvoWeaver-SLPreds]{EvoWeaver Sequence Level Methods} used in the EvoWeaver manuscript.
 }
 
