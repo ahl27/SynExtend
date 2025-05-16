@@ -1244,14 +1244,19 @@ SummarizePairs <- function(SynExtendObject,
         # }
         
         # block size determination
-        if (nrow(SynExtendObject[[m1, m2]][w_retain, ]) > 1) {
+        if (length(w_retain) > 1) {
           blockres <- BlockByRank(index1 = IMatrix[w_retain, 1L],
                                   partner1 = PMatrix[w_retain, 1L],
                                   index2 = IMatrix[w_retain, 2L],
                                   partner2 = PMatrix[w_retain, 2L])
-        } else {
+        } else if (length(w_retain) == 1) {
           blockres <- list("absblocksize" = 1L,
                            "blockidmap" = -1L)
+        } else {
+          blockres <- list("absblocksize" = vector(mode = "integer",
+                                                   length = 0L),
+                           "blockidmap" = vector(mode = "integer",
+                                                 length = 0L))
         }
         block_ph <- blockres$blockidmap
         w1 <- block_ph > 0
@@ -1269,7 +1274,6 @@ SummarizePairs <- function(SynExtendObject,
         
         # BlockSize evaluation is complete
         # we're eventually moving blocksize stuff down to happen post everything else
-        
         PH[[Count]] <- data.frame("p1" = names(QueryDNA)[PMatrix[w_retain, 1]],
                                   "p2" = names(SubjectDNA)[PMatrix[w_retain, 2]],
                                   "Consensus" = diff2[w_retain],
@@ -1348,11 +1352,13 @@ SummarizePairs <- function(SynExtendObject,
   Attr_PH <- do.call(rbind,
                      Attr_PH)
   rownames(Attr_PH) <- NULL
-  # return(res)
-  All_UIDs <- unique(res$Block_UID)
-  res$Block_UID[res$Block_UID == -1L] <- seq(from = max(All_UIDs) + 1L,
-                                             by = 1L,
-                                             length.out = sum(res$Block_UID == -1L))
+  if (nrow(res) > 0) {
+    # return(res)
+    All_UIDs <- unique(res$Block_UID)
+    res$Block_UID[res$Block_UID == -1L] <- seq(from = max(All_UIDs) + 1L,
+                                               by = 1L,
+                                               length.out = sum(res$Block_UID == -1L))
+  }
   attr(x = res,
        which = "GeneCalls") <- GeneCalls
   class(res) <- c("data.frame",
