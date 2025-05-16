@@ -249,13 +249,13 @@ WithinSetCompetition <- function(SynExtendObject,
       w1 <- block_ph > 0
       if (any(w1)) {
         block_ph[w1] <- block_ph[w1] + block_offset
-        block_offset <- block_offset + max(block_ph)
+        # block_offset <- block_offset + as.numeric(max(block_ph)) # these numbers get big fast and i need to figure out why
+        block_offset <- as.numeric(max(block_ph)) + 1
       }
-      # print(block_offset)
     } else {
       # no blocks to add to the offset!
-      blockres <- list("absblocksize" = 1L,
-                       "blockidmap" = -1L)
+      blockres <- list("absblocksize" = 1,
+                       "blockidmap" = -1)
       block_ph <- blockres$blockidmap
       # ph[[m1]] <- blockres
     }
@@ -278,19 +278,6 @@ WithinSetCompetition <- function(SynExtendObject,
   df1 <- do.call(rbind,
                  df1)
   rownames(df1) <- NULL
-  # return(df1)
-  w1 <- df1$Block_UID == -1L
-  if (any(w1) &
-      !all(w1)) {
-    df1$Block_UID[w1] <- seq(from = max(df1$Block_UID) + 1L,
-                             by = 1,
-                             length.out = sum(w1))
-  } else if (any(w1) &
-             all(w1)) {
-    df1$Block_UID <- seq(from = 1,
-                         by = 1,
-                         length.out = sum(w1))
-  }
   
   if (Verbose) {
     cat("final pass completed!\n")
