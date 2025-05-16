@@ -1,4 +1,4 @@
-SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1){
+SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, ...){
   # error checking
   if (!is(myDendList, 'list') ||
       !all(vapply(myDendList, \(x) is(x, 'dendrogram') || is.null(x), FUN.VALUE=TRUE))){
@@ -105,7 +105,6 @@ SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1){
     countmat[posmissing] <- 1
     dmat <- dmat / countmat
     dmat[posmissing] <- NA_real_
-    if(Verbose) cat('\n')
     # At some point we'll need to refactor dineof to work with dist obj
     dmat <- as.dist(dineof(as.matrix(dmat), verbose=Verbose)$X)
   } else {
@@ -116,8 +115,7 @@ SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1){
   if(Verbose){
     cat("\n\n  Building species tree...\n")
   }
-  newTree <- TreeLine(myDistMatrix=dmat, method="NJ",
-                      verbose=Verbose, processors = Processors)
+  newTree <- TreeLine(myDistMatrix=dmat, verbose=Verbose, ...)
 
   if (Verbose){
     dt <- difftime(start, Sys.time())

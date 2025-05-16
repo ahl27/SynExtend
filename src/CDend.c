@@ -267,8 +267,8 @@ SEXP RFDist(SEXP tnPtr1, SEXP tnPtr2, SEXP allLabels){
     allHashed[i] = hashLabel(STRING_ELT(allLabels, i));
   }
 
-  int t1pl = tree1->value-1;
-  int t2pl = tree2->value-1;
+  int t1pl = tree1->value;
+  int t2pl = tree2->value;
 
   ulong *keyvals = R_Calloc(numLabels, ulong);
   ulong *ht1 = R_Calloc(t1pl, ulong);

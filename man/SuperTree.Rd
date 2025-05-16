@@ -28,8 +28,8 @@ SuperTree(myDendList, NAMEFUN=NULL, Verbose=TRUE, Processors=1)
 Logical; Determines if status messages and progress bars should be displayed while running.
 }
 
-\item{Processors}{
-Integer; Number of processors to use for calculating the final species tree.
+\item{\dots}{
+Further arguments passed to \code{\link{TreeLine}}
 }
 }
 \details{
