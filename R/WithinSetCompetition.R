@@ -229,7 +229,6 @@ WithinSetCompetition <- function(SynExtendObject,
                                 "PairSummaries")
                   return(x)
                 })
-  # return(df1)
   
   ph <- vector(mode = "list",
                length = length(df2))
@@ -250,20 +249,13 @@ WithinSetCompetition <- function(SynExtendObject,
       w1 <- block_ph > 0
       if (any(w1)) {
         block_ph[w1] <- block_ph[w1] + block_offset
-        block_offset <- block_offset + max(block_ph)
-      }
-      print(block_offset)
-      print(max(block_ph))
-      if (max(block_ph) > 1e8) {
-        return(list("a" = blockres,
-                    "b" = w1,
-                    "c" = block_offset,
-                    "d" = block_ph))
+        # block_offset <- block_offset + as.numeric(max(block_ph)) # these numbers get big fast and i need to figure out why
+        block_offset <- as.numeric(max(block_ph)) + 1
       }
     } else {
       # no blocks to add to the offset!
-      blockres <- list("absblocksize" = 1L,
-                       "blockidmap" = -1L)
+      blockres <- list("absblocksize" = 1,
+                       "blockidmap" = -1)
       block_ph <- blockres$blockidmap
       # ph[[m1]] <- blockres
     }

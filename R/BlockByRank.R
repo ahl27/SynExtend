@@ -31,12 +31,18 @@ BlockByRank <- function(index1,
                                           as.integer(FeaturesMat[, 3L]),
                                           dr2),
                                  drop = TRUE))
-  Blocks <- c(InitialBlocks1[sapply(InitialBlocks1,
-                                    function(x) nrow(x),
-                                    simplify = TRUE) > 1],
-              InitialBlocks2[sapply(InitialBlocks2,
-                                    function(x) nrow(x),
-                                    simplify = TRUE) > 1])
+  Blocks <- c(InitialBlocks1[vapply(X = InitialBlocks1,
+                                    FUN = function(x) {
+                                      nrow(x)
+                                    },
+                                    FUN.VALUE = vector(mode = "integer",
+                                                       length = 1)) > 1L],
+              InitialBlocks2[vapply(X = InitialBlocks2,
+                                    FUN = function(x) {
+                                      nrow(x)
+                                    },
+                                    FUN.VALUE = vector(mode = "integer",
+                                                       length = 1)) > 1L])
   L01 <- length(Blocks)
   if (L01 > 0) {
     for (m3 in seq_along(Blocks)) {
@@ -56,8 +62,8 @@ BlockByRank <- function(index1,
       for (m4 in seq_along(sp1)) {
         it3 <- sp2[m4]
         it5 <- sp3[m4]
-        if ((it3 - it2 > 1L) |
-            (it5 - it4 > 1L)) {
+        if (abs(it3 - it2 > 1L) |
+            abs(it5 - it4 > 1L)) {
           # if predicted pairs are not contiguous, update the iterator
           it1 <- it1 + 1L
         }
@@ -79,11 +85,12 @@ BlockByRank <- function(index1,
     Blocks <- unlist(Blocks,
                      recursive = FALSE)
     # drop blocks of size 1, they do not need to be evaluated
-    Blocks <- Blocks[sapply(X = Blocks,
+    Blocks <- Blocks[vapply(X = Blocks,
                             FUN = function(x) {
                               nrow(x)
                             },
-                            simplify = TRUE) > 1L]
+                            FUN.VALUE = vector(mode = "integer",
+                                               length = 1)) > 1]
     L01 <- length(Blocks)
     AbsBlockSize <- rep(1L,
                         nrow(FeaturesMat))
