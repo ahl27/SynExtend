@@ -14,7 +14,7 @@ protein or gene data. EvoWeaver implements multiple algorithms for analyzing coe
 \usage{
 EvoWeaver(ListOfData, MySpeciesTree=NULL, NoWarn=FALSE)
 
-\method{SpeciesTree}{EvoWeaver}(ew, Verbose=TRUE, Processors=1L)
+\method{SpeciesTree}{EvoWeaver}(ew, Verbose=TRUE, ...)
 }
 \arguments{
   \item{ListOfData}{
@@ -33,11 +33,10 @@ Logical; If \code{FALSE}, displays warnings corresponding to which algorithms ar
 An object of class \code{EvoWeaver}.
 }
 \item{Verbose}{
-Logical; If \code{TRUE}, displays output when calculating species tree.
+Logical; If \code{TRUE}, displays output when calculating reference tree.
 }
-\item{Processors}{
-Integer; The number of processors to use. Set to \code{NULL} to automatically use the maximum
-amount of processors.
+\item{...}{
+Further arguments passed to \code{\link{SuperTree}} for inferring a reference tree.
 }
 }
 \details{
