@@ -125,7 +125,12 @@ RejectionBy <- function(input,
     # check the size of the objects and use the drop logical to choose whether to
     # retain the entire set, or reject the entire set in cases where there are too few candidates
     # for the unlabeled clustering
-    
+    # return(input)
+    # this loops because i was trying to be forward compatible with giving alignment
+    # classes that describe the concordance or discordance between the assignments of
+    # features as coding or not, and their alignment in coding space or not...
+    # unsupervised clustering in this manner needs to run checks within those class groups
+    # as opposed to combining them ... that is the purpose
     for (m1 in seq_along(input)) {
       w1_drop <- which(colnames(input[[m1]]) %in% c("response"))
       if (length(w1_drop) > 0) {
@@ -140,7 +145,8 @@ RejectionBy <- function(input,
                              length = 0L)
       }
       
-      rowcheck <- nrow(input[[m1]]) <= criteria$kargs$max
+      # kmeans needs to check for *unique* data points
+      rowcheck <- nrow(unique(input[[m1]])) <= criteria$kargs$max
       
       if (dropinappropriate & rowcheck) {
         # just drop everything
