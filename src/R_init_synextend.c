@@ -60,6 +60,7 @@ static const R_CallMethodDef callMethods[] = { // method call, pointer, num args
   CALLDEF(R_learn_tree, 9),
   CALLDEF(R_get_treeptr, 4),
   CALLDEF(R_rfpredict, 4),
+  CALLDEF(HitConsensus, 6),
   {NULL, NULL, 0}
 };
 

@@ -77,4 +77,7 @@ SEXP R_learn_tree(SEXP DATA, SEXP NROWS, SEXP NCOLS, SEXP RESPONSE,
 SEXP R_get_treeptr(SEXP VolatilePtr, SEXP INDICES, SEXP THRESHOLDS, SEXP GINIS);
 SEXP R_rfpredict(SEXP RF_Obj, SEXP DATA, SEXP L, SEXP NENTRIES);
 
+/**** Hit diffs ****/
+SEXP HitConsensus(SEXP f1lb, SEXP f1rb, SEXP f2lb, SEXP f2rb, SEXP s1, SEXP s2);
+
 #endif
