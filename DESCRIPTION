@@ -1,6 +1,6 @@
 Package: SynExtend
 Type: Package
-Title: Tools for Working With Synteny Objects
+Title: Tools for Comparative Genomics
 Version: 1.21.1
 Authors@R: c(
 	person("Nicholas", "Cooley", email = "npc19@pitt.edu", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6029-304X")),
@@ -8,8 +8,8 @@ Authors@R: c(
 	person("Adelle", "Fernando", email = "Adelle.fernando@gmail.com", role = "ctb"),
 	person("Erik", "Wright", email = "ESWRIGHT@pitt.edu", role = "aut"))
 biocViews: Genetics, Clustering, ComparativeGenomics, DataImport
-Description: Shared order between genomic sequences provide a great deal of information. Synteny objects produced by the R package DECIPHER provides quantitative information about that shared order. SynExtend provides tools for extracting information from Synteny objects.
-Depends: R (>= 4.4.0), DECIPHER (>= 2.28.0)
+Description: A multitude of tools for comparative genomics, focused on large-scale analyses of biological data. SynExtend includes tools for working with syntenic data, clustering massive network structures, and estimating functional relationships among genes.
+Depends: R (>= 4.5.0), DECIPHER (>= 2.28.0)
 Imports: methods, Biostrings, S4Vectors, IRanges, utils, stats, parallel, graphics, grDevices, RSQLite, DBI
 Suggests: BiocStyle, knitr, igraph, markdown, rmarkdown
 License: GPL-3
@@ -19,3 +19,4 @@ NeedsCompilation: yes
 VignetteBuilder: knitr
 URL: https://github.com/npcooley/SynExtend
 BugReports: https://github.com/npcooley/SynExtend/issues/new/
+LazyLoad: true

@@ -47,73 +47,12 @@
  *    - can probably remove the `index` attribute of trie leaves
  */
 
-#include "SEutils.h"
-#include "SynExtend.h"
-#include "PrefixTrie.h"
-#include "LoserTree.h"
-#include <time.h>
+#include "ExoLabel.h"
 
-// includes for file truncation
-#ifdef HAVE_UNISTD_H
-  #include <unistd.h>
-#else
-  #ifdef WIN32
-    #include <io.h>
-  #endif
-#endif
+/**********************/
+/* Internal Constants */
+/**********************/
 
-
-/***********/
-/* Defines */
-/***********/
-#define h_uint uint64_t
-#define uint uint_fast32_t
-#define strlen_uint uint_least16_t
-#define l_uint uint64_t
-#define lu_fprint PRIu64
-#define w_float float
-#define aq_int int16_t // size of "seen" counter in ArrayQueue
-
-/*
- * common limits are defined in limits.h
- *  PAGE_SIZE: size in bytes of a page
- *  PATH_MAX: max size in bytes of a path name
- *  I'm not really using these for anything yet, but maybe eventually
- */
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
-#endif
-
-
-// max size of a vertex name (char array will have one extra space for terminator)
-#define MAX_NODE_NAME_SIZE 255
-
-// holds pointers char* of size MAX_NODE_NAME_SIZE, 4096 is 1MB
-#define NODE_NAME_CACHE_SIZE 40960
-
-// number of entries, so total consumption often multiplied by 8
-#define FILE_READ_CACHE_SIZE 8192*4
-
-/*************/
-/* Constants */
-/*************/
-
-static const double MIN_DOUBLE = -1 * DBL_MIN;
-static const int L_SIZE = sizeof(l_uint);
-static const int W_SIZE = sizeof(w_float);
-static const char CONSENSUS_CSRCOPY1[] = "tmpcsr1";
-static const char CONSENSUS_CLUSTER[] = "tmpclust";
-
-/*
- * Constants for weight compression, see compressEdgeWeights for details
- */
-static const int BITS_FOR_WEIGHT = 16;
-static const int BITS_FOR_EXP = 4;
 
 // don't touch, values auto-determined from above constants
 static const l_uint MAX_NUM_NODES = (1ULL << (64-(BITS_FOR_WEIGHT+BITS_FOR_EXP))) - 1;
@@ -125,31 +64,6 @@ enum VERBOSITY {
   VERBOSE_BASIC = 1,  // non-interactive output, better for files
   VERBOSE_ALL = 2     // interactive output, lots of carriage returns
 };
-
-/*
- * Some comments on external sorting performance:
- *  - FILE_READ_CACHE_SIZE determines the initial sort size and the buffer size
- *  - More buffers means more RAM consumption, but fewer passes through the file
- *  - Block interchanges happen when some not-yet-processed data will be
- *    overwritten by an output dump. These are the slowest operation. Could maybe
- *    be sped up by using a fixed size temporary file as a larger buffer...?
- *    More intelligent block interchanges would also speed up a lot.
- *  - Larger input buffers means more sequential access and fewer block
- *    interchange operations
- *  - More buffers means more block interchange operations
- *  - Mergesort bin space is multiplied by sizeof(edge) (>=16 bytes)
- */
-static const int MAX_BINS_FOR_MERGE = 64; // will round up to next highest power of 2
-static const int MERGE_INPUT_SIZE = FILE_READ_CACHE_SIZE;
-static const int MERGE_OUTPUT_SIZE = 16*FILE_READ_CACHE_SIZE;
-
-// Erik says this isn't really useful, so disabling
-// set to a positive value for a cutoff to re-add values to the queue
-static const int MAX_EDGES_EXACT = -1;
-
-// Progress printing values (also controls R_checkUserInterrupt() checks)
-static const int PRINT_COUNTER_MOD = 811*13;
-static const int PROGRESS_COUNTER_MOD = 6043;
 
 /**********************/
 /* Struct Definitions */
@@ -315,7 +229,7 @@ static void print_graph_stats(l_uint num_v, l_uint num_e){
   l_uint divisor;
   int to_print, first_val, is_really_big;
   for(int i=0; i<2; i++){
-    is_really_big = vals[i] >= (1000000000ULL * (vals[i] ? 1 : 1000));
+    is_really_big = vals[i] >= (1000000000ULL * (i ? 1 : 1000));
     if(i == 0)
       Rprintf("Total Vertices: ");
     else
@@ -436,7 +350,8 @@ static void decompressEdgeValue(l_uint compressed, l_uint *v2, w_float *w){
   w_comp = pow(2, w_comp) - 1;
 
   *w = (w_float)w_comp;
-  *v2 = compressed >> (BITS_FOR_WEIGHT + BITS_FOR_EXP);
+  // this check is to simplify code if we only need the float part
+  if(v2) *v2 = compressed >> (BITS_FOR_WEIGHT + BITS_FOR_EXP);
 
   return;
 }
@@ -703,7 +618,7 @@ static void kway_mergesort_file_inplace(const char* f1,
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
-      Rprintf(")  \r");
+      Rprintf(" disk space)  \r");
     } else if(verbose == VERBOSE_BASIC){
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint "\n", tmpniter, nmax_iterations);
     }
@@ -766,7 +681,7 @@ static void kway_mergesort_file_inplace(const char* f1,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
+            Rprintf(" disk space)  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -792,11 +707,7 @@ static void kway_mergesort_file_inplace(const char* f1,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
-          } else if(verbose == VERBOSE_BASIC && cur_progress == 100){
-            Rprintf("\tIteration complete (used ");
-            report_filesize(ftell(fileptr));
-            Rprintf(")\n");
+            Rprintf(" disk space)  \r");
           }
         R_CheckUserInterrupt();
       }
@@ -816,7 +727,7 @@ static void kway_mergesort_file_inplace(const char* f1,
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
-    Rprintf(")  \n");
+    Rprintf(" disk space)  \n");
   }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
@@ -900,7 +811,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
       Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                         tmpniter, nmax_iterations, cur_progress);
       report_filesize(max_fsize);
-      Rprintf(")  \r");
+      Rprintf(" disk space)  \r");
     }
     R_CheckUserInterrupt();
 
@@ -961,7 +872,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                               tmpniter, nmax_iterations, cur_progress);
             report_filesize(max_fsize);
-            Rprintf(")  \r");
+            Rprintf(" disk space)  \r");
           }
           R_CheckUserInterrupt();
         }
@@ -980,12 +891,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
           Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                             tmpniter, nmax_iterations, cur_progress);
           report_filesize(max_fsize);
-          Rprintf(")  \r");
-        } else if(verbose == VERBOSE_BASIC && cur_progress == 100){
-          Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
-                            tmpniter, nmax_iterations, cur_progress);
-          report_filesize(max_fsize);
-          Rprintf(")  \n");
+          Rprintf(" disk space)  \r");
         }
         R_CheckUserInterrupt();
       }
@@ -1010,7 +916,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
     Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
                       tmpniter, nmax_iterations, 100.0);
     report_filesize(max_fsize);
-    Rprintf(")  \n");
+    Rprintf(" disk space)  \n");
   }
   for(int i=0; i<num_bins; i++) free(buffers[i]);
   free(buffers);
@@ -1471,11 +1377,11 @@ static void update_node_cluster(l_uint ind,
   return;
 }
 
-static void cluster_file(const char* weights_fname,
-                          const char* neighbor_fname,
-                          const l_uint num_v, const int max_iterations, const int v,
-                          const float self_loop_weight,
-                          const double atten_pow, const double dist_pow){
+void cluster_file(const char* weights_fname,
+                  const char* neighbor_fname,
+                  const l_uint num_v, const int max_iterations, const int v,
+                  const float self_loop_weight,
+                  const double atten_pow, const double dist_pow){
   // main runner function to cluster nodes
   FILE *weightsfile = safe_fopen(weights_fname, "rb+");
   FILE *neighborfile = safe_fopen(neighbor_fname, "rb");
@@ -1672,13 +1578,12 @@ static void resolve_cluster_consensus(const char* clusters,
   return;
 }
 
-static void consensus_cluster_oom(const char* weightsfile,
-                            const char* neighborfile, const char* dir,
-                            const l_uint num_v, const int num_iter, const int v,
-                            const float self_loop_weight,
-                            const double atten_pow, const double dist_pow,
-                            const double* consensus_weights, const int consensus_len){
-
+void consensus_cluster_oom(const char* weightsfile,
+                          const char* neighborfile, const char* dir,
+                          const l_uint num_v, const int num_iter, const int v,
+                          const float self_loop_weight,
+                          const double atten_pow, const double dist_pow,
+                          const double* consensus_weights, const int consensus_len){
   /*
    * Inputs:
    *  - weightsfile: weights of each edge
@@ -2141,15 +2046,19 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
       num_iter[i] = base_iter;
     }
     time1 = time(NULL);
+    // weights will be compressed and decompressed, but self_loop_weights isn't yet
+    // this could cause issues if there's a loss in precision in weights
+    w_float new_slw;
+    decompressEdgeValue(compressEdgeValues(0,0,self_loop_weights[i]).w, NULL, &new_slw);
     if(consensus_len){
       consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
-                            num_iter[i], verbose, self_loop_weights[i],
+                            num_iter[i], verbose, new_slw,
                             atten_power[i], dist_power[i],
                             consensus_w, consensus_len);
 
     } else {
       cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
-                    self_loop_weights[i], atten_power[i], dist_power[i]);
+                    new_slw, atten_power[i], dist_power[i]);
     }
     time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");

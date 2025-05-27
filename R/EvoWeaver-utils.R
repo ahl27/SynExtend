@@ -22,8 +22,7 @@ NormArgProcessors <- function(Processors){
     Processors <- coresAvailable
   }
   Processors <- max(1L, Processors)
-  Processors <- min(Processors, coresAvailable)
-  Processors
+  min(Processors, coresAvailable)
 }
 
 BuildSimMatInternal <- function(vecs, uvals, evalmap, l, n, FXN, ARGS, Verbose,
@@ -767,7 +766,7 @@ ResidueMIDend <- function(dend1, dend2, cutoff=0.9, comppct=0.25, useColoc, ...)
   return(res)
 }
 
-ResidueMISeqs <- function(seqs1, seqs2, lookup, Processors, CombinePVal, ...){
+ResidueMISeqs <- function(seqs1, seqs2, lookup, Processors=1L, CombinePVal, ...){
   baseReturn <- ifelse(CombinePVal, 0, 0+0i)
   if(ncol(seqs1) * ncol(seqs2) == 0){
     return(baseReturn)
@@ -999,14 +998,14 @@ predictWithBuiltins <- function(preds, model=c("KEGG", "CORUM")){
   predict(model, preds, type='response')
 }
 
-findSpeciesTree <- function(ew, Verbose=TRUE, NameFun=NULL, Processors=1L){
+findSpeciesTree <- function(ew, Verbose=TRUE, NameFun=NULL, ...){
   stopifnot("EvoWeaver object must contain dendrograms"=attr(ew, "useMT"))
   if (attr(ew, "useColoc") && is.null(NameFun)){
     NameFun <- function(x) gsub('([^_])_.*', '\\1', x)
   }
 
   SpecTree <- SuperTree(unclass(ew), NAMEFUN=NameFun,
-                        Verbose=Verbose, Processors=Processors)
+                        Verbose=Verbose, ...)
 
   return(SpecTree)
 }

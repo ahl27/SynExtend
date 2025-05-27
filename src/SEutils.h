@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <R_ext/Random.h>
+#include <R_ext/Error.h>
 #include <R.h>
 #include <Rdefines.h>
 

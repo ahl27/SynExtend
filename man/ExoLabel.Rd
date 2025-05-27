@@ -13,7 +13,6 @@ ExoLabel(edgelistfiles,
               mode=c("undirected", "directed"),
               add_self_loops=FALSE,
               attenuation=TRUE,
-              dist_scaling=TRUE,
               ignore_weights=FALSE,
               iterations=0L,
               return_table=FALSE,
@@ -43,10 +42,6 @@ Logical or Numeric; determines if a self-loop cutoff should be added to the netw
 
 \item{attenuation}{
 Logical or Numeric; determines if label-hop attenuation should be used. If \code{TRUE}, uses attenuation to prevent single clusters from dominating results. Can also be set to a numeric to influence the strength of attenuation (larger values produce larger clusters). See "Attenuation" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see "Multiple Clustering").
-}
-
-\item{dist_scaling}{
-Logical or Numeric; further controls the scaling of label-hop attenuation. See "Attenuation" for more information on this parameter. Can also be set to a vector when running multiple clusterings (see "Multiple Clustering").
 }
 
 \item{ignore_weights}{
@@ -111,13 +106,11 @@ One of the main issues of Label Propagation algorithms is that they can fail to 
 }
 
 \section{Attenuation}{
-ExoLabel also incorporates label-hop attenuation to reduce the chance of a single massive cluster dominating results, as inspired by Leung et al. (2009). In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. Each node's attenuated weight is calculated as \eqn{w' = w(1-p^ad^s)}, with \eqn{w} the node weight, \eqn{p} the proportion of nodes that changed label in the previous iteration, \eqn{a} the attenuation power (as controlled by \code{attenuation}), \eqn{d} the distance from the initial label, and \eqn{s} the distance scaling (as controlled by \code{dist_scaling}).
+ExoLabel also incorporates label-hop attenuation to reduce the chance of a single massive cluster dominating results, as inspired by Leung et al. (2009). In short, as a particular label propagates to other nodes, its subsequent contribution diminishes. The farther a particular label is from its original source, the less its contribution. The degree to which its contribution diminishes scales dynamically based on the proportion of nodes that update on each cycle. Each node's attenuated weight is calculated as \eqn{w' = w(1-(pd)^a)}, with \eqn{w} the node weight, \eqn{p} the proportion of nodes that changed label in the previous iteration, \eqn{d} the distance from the initial label, and \eqn{a} the attenuation power (as controlled by \code{attenuation}).
 
-Larger values of \code{attenuation} create larger clusters, whereas smaller values create smaller clusters. Passing a value of \code{FALSE} (equivalent to 0.0) disables attenuation entirely rather than returning all singleton clusters.
+Passing a value of \code{FALSE} (equivalent to 0.0) disables attenuation entirely rather than returning all singleton clusters.
 
-Larger values of \code{dist_scaling} create smaller clusters by making the impact of attenuation more severe, whereas smaller values create larger clusters. Setting \code{dist_scaling} to \code{FALSE} (equivalent to 0.0) will completely disable attenuation by making the algorthm ignore distances. \bold{Note:} this parameter is somewhat experimental and its use is discouraged.
-
-The default values of \code{TRUE} for both \code{attenuation} and \code{dist_scaling} (equivalent to 1.0) recover the original implementation provided in Leung et al. (2009).
+The default values of \code{TRUE} for \code{attenuation} (equivalent to 1.0) recovers the original implementation provided in Leung et al. (2009).
 }
 
 \section{Multiple Clusterings}{
@@ -140,7 +133,7 @@ By default, this runs nine times for shape parameters \code{c(0,0.2,0.4,0.6,0.8,
 \value{
 Returns a list object with the parameters and result of the clustering. If using multiple clusterings, the return value is a list of lists, with each entry corresponding to the single-clustering case. This list has three entries, \code{parameters}, \code{graph_stats}, and \code{results}.
 
-\code{parameters} is a named vector with the values of \code{add_self_loops}, \code{attenuation}, \code{dist_scaling}, and \code{iterations} used for the clustering.
+\code{parameters} is a named vector with the values of \code{add_self_loops}, \code{attenuation}, and \code{iterations} used for the clustering.
 
 \code{graph_stats} is a named numeric vector containing the number of nodes and edges in the input graph.
 

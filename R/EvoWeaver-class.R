@@ -25,7 +25,7 @@
 
 #### S3 Generic Definitions ####
 Ensemble <- function(ew, ...) UseMethod('Ensemble')
-SpeciesTree <- function(ew, Verbose, Processors) UseMethod('SpeciesTree')
+SpeciesTree <- function(ew, Verbose, ...) UseMethod('SpeciesTree')
 ########
 
 
@@ -125,9 +125,11 @@ validate_EvoWeaver <- function(ipt, noWarn=FALSE){
     bitflags[['usecoloc']] <- TRUE
     checkforstrand <- grepl('[^_]+_[^_]+_[01]_[0-9]+', allentries)
     bitflags[['strandid']] <- all(checkforstrand)
+    if(!all(checkforstrand) && !noWarn) message("Some gene IDs have incorrect ",
+                                                "strand identifiers; Method ",
+                                                "'OrientationMI' is disabled.")
     allentries <- unique(gsub('([^_]+)_[^_]+_.*[0-9]+', '\\1', allentries))
-  }
-  else{
+  } else {
     bitflags[['usecoloc']] <- FALSE
     bitflags[['strandid']] <- FALSE
     if (!noWarn) message('Co-localization disabled. Labels must be in the format ',
@@ -318,7 +320,7 @@ print.EvoWeaver <- function(x, ...){
   new_EvoWeaver(newv)
 }
 
-predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors=1L,
+predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL,
                                MySpeciesTree=SpeciesTree(object, Verbose=Verbose),
                                PretrainedModel="KEGG",
                                NoPrediction=FALSE,
@@ -336,8 +338,11 @@ predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors
     Method <- c("PhylogeneticProfiling")
     if(attr(ew, "useMT"))
       Method <- c(Method, "PhylogeneticStructure")
-    if(attr(ew, "useColoc"))
+    if(attr(ew, "useColoc") && attr(ew, "useStrand")){
       Method <- c(Method, "GeneOrganization")
+    } else if(attr(ew, "useColoc")){
+      Method <- c(Method, "GeneDistance", "MoransI")
+    }
     if(attr(ew, "useResidue"))
       Method <- c(Method, "SequenceLevel")
   }
@@ -371,7 +376,7 @@ predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors
     if(Verbose) starttime <- Sys.time()
 
     preds <- func(ew, Subset=Subset, Verbose=Verbose,
-                  MySpeciesTree=MySpeciesTree, Processors=Processors,
+                  MySpeciesTree=MySpeciesTree,
                   PretrainedModel=PretrainedModel,
                   NoPrediction=NoPrediction,
                   precalcSubset=subs,
@@ -426,10 +431,10 @@ predict.EvoWeaver <- function(object, Method='Ensemble', Subset=NULL, Processors
   lst
 }
 
-SpeciesTree.EvoWeaver <- function(ew, Verbose=TRUE, Processors=1L){
+SpeciesTree.EvoWeaver <- function(ew, Verbose=TRUE, ...){
   tree <- attr(ew,'speciesTree')
   if(is.null(tree) && attr(ew, 'useMT'))
-    tree <- findSpeciesTree(ew, Verbose=Verbose, Processors=Processors)
+    tree <- findSpeciesTree(ew, Verbose=Verbose, ...)
 
   tree
 }

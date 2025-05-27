@@ -1,2 +1,37 @@
 PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS)
 PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
+
+# C source files
+PKG_C_SOURCES = \
+  calcMIR2C.c \
+  CDend.c \
+  CShuffle.c \
+  dendrapply.c \
+  HungarianAlgo.c \
+  MoranI.c \
+  NucleotideCounts.c \
+  R_init_synextend.c \
+  RandomForest.c \
+  SEutils.c \
+  XORRand.c \
+  ExoLabel/ExoLabel.c \
+  ExoLabel/LoserTree.c \
+  ExoLabel/PrefixTrie.c \
+
+# Fortran source files
+PKG_F_SOURCES = \
+  cart_methods.f95 \
+  tabulate_mod.f95 \
+  utilfuncs.f95 \
+
+# object files created
+OBJECTS = $(PKG_C_SOURCES:.c=.o) $(PKG_F_SOURCES:.f95=.o)
+
+all: $(SHLIB)
+
+# dependencies have to be specified because of parallel make
+# FILE : FILE_IT_DEPENDS_ON
+cart_methods.o: utilfuncs.o tabulate_mod.o
+
+# define a clean function, otherwise .o files in directories won't be cleaned
+clean: rm -f $(OBJECTS) && rm -rf *.mod

@@ -10,6 +10,8 @@ generate_random_graph <- function(nverts, nedges){
   data.frame(v1=labs[df[,1]], v2=labs[df[,2]], w=runif(nedges))
 }
 
+
+
 run_status_tests <- function(){
   if(!require(igraph)){
     cat("Skipping tests, igraph is not available.\n")
