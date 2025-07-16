@@ -70,7 +70,9 @@ ExoLabel <- function(edgelistfiles,
   add_self_loops <- .safecheck_optional_numeric("add_self_loops", add_self_loops, length(outfile))
 
   ## check header
-  if(is.logical(header)) header <- as.integer(header)
+  if(is.logical(header) || (is.numeric(header) && !is.integer(header)))
+    header <- as.integer(header)
+
   if(!is.integer(header) || is.na(header) || is.null(header)){
     stop("'header' must be a finite logical or integer value")
   }

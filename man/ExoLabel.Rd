@@ -69,7 +69,7 @@ Character; expected character that separates entries on a line in each file in \
 }
 
 \item{header}{
-Logical or Integer; determines if the first line of edgelist files should be skipped. If logical, \code{TRUE} skips the first line of each file.. If set to an integer \code{n}, skips the first \code{n} lines.
+Logical or Integer; determines if the first line of edgelist files should be skipped. If logical, \code{TRUE} skips the first line of each file.. If set to an integer \code{n}, skips the first \code{n} lines. Negative values are treated as 0, and decimals are coerced to integer.
 }
 
 \item{tempfiledir}{
