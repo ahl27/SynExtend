@@ -10,8 +10,6 @@ generate_random_graph <- function(nverts, nedges){
   data.frame(v1=labs[df[,1]], v2=labs[df[,2]], w=runif(nedges))
 }
 
-
-
 run_status_tests <- function(){
   if(!require(igraph)){
     cat("Skipping tests, igraph is not available.\n")
@@ -65,6 +63,12 @@ run_status_tests <- function(){
   testExo(c(tf1, tf2))
   cat("passed.\n")
 
+  cat("Headers...")
+  testExo(c(tf1, tf2), header=TRUE)
+  testExo(c(tf1, tf2), header=10L)
+  cat("passed.\n")
+
+
   cat("Larger weights...")
   df[,3] <- df[,3] * 1000
   write.table(df, tf1, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
@@ -73,6 +77,8 @@ run_status_tests <- function(){
 
   file.remove(tf1)
   file.remove(tf2)
+
+
 
   cat("\nAll checks passed!\n")
   invisible(TRUE)

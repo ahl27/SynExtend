@@ -52,6 +52,7 @@ ExoLabel <- function(edgelistfiles,
                           use_fast_sort=TRUE,
                           verbose=interactive(),
                           sep='\t',
+                          header=FALSE,
                           tempfiledir=tempdir()){
   if(return_table){
     maxp <- max(length(add_self_loops),
@@ -67,6 +68,16 @@ ExoLabel <- function(edgelistfiles,
   iterations <- .safecheck_optional_integer("iterations", iterations, 32767L, TRUE, length(outfile))
   attenuation <- .safecheck_optional_numeric("attenuation", attenuation, length(outfile))
   add_self_loops <- .safecheck_optional_numeric("add_self_loops", add_self_loops, length(outfile))
+
+  ## check header
+  if(is.logical(header)) header <- as.integer(header)
+  if(!is.integer(header) || is.na(header) || is.null(header)){
+    stop("'header' must be a finite logical or integer value")
+  }
+  if(length(header) > 1){
+    header <- header[1]
+    warning("ignoring extra values passed to 'header'")
+  }
 
   if(any(add_self_loops < 0)){
     warning("self loops weight supplied is negative, setting to zero.")
@@ -158,7 +169,7 @@ ExoLabel <- function(edgelistfiles,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
                        !use_fast_sort,
-                       attenuation, FALSE)
+                       attenuation, header, FALSE)
   names(graph_stats) <- c("num_vertices", "num_edges")
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
@@ -249,6 +260,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                      use_fast_sort=TRUE,
                      verbose=FALSE,
                      sep='\t',
+                     header=FALSE,
                      tempfiledir=tempdir(),
                      skip_checks=FALSE){
   verbose_int <- as.integer(verbose)
@@ -320,7 +332,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
                        !use_fast_sort,
-                       attenuation, TRUE)
+                       attenuation, header, TRUE)
 
   if(verbose){
     cat('\n')
@@ -335,7 +347,7 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
 
   benchmark_graph <- data.frame(v1=character(0L), v2=character(0L), w=numeric(0L))
   for(f in edgelistfiles){
-    tmp <- read.delim(f, header=FALSE, sep=sep)
+    tmp <- read.delim(f, header=FALSE, sep=sep, skip=as.integer(header))
     benchmark_graph <- rbind(benchmark_graph, tmp)
   }
   colnames(benchmark_graph) <- c("v1", "v2", "weight")

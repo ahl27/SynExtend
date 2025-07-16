@@ -1065,6 +1065,7 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
                                   l_uint* num_v, int v,
                                   const int is_undirected,
                                   const int ignore_weights,
+                                  const int skip_header_lines,
                                   int is_final_file){
   /*
    * This combines reading nodes and edges
@@ -1107,7 +1108,19 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
 
   if(v >= VERBOSE_BASIC) Rprintf("\tReading file %s...\n", edgefile);
 
-  char c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+  // skip first n lines of the file
+  char c;
+  for(int i=0; i<skip_header_lines && (remaining || !feof(edgelist)); i++){
+    // c is NULL or at the linesep, we have to advance it forward by one element
+    c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+    
+    // skip a complete line
+    while(c != linesep && (remaining || !feof(edgelist)))
+      c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+  }
+
+  // advance one element (first element of first unskipped line)
+  c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
   while(!feof(edgelist) || remaining){ // file isn't done OR buffer has data
     // read in the two vertex names
     for(int i=0; i<2; i++){
@@ -1651,7 +1664,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
                     SEXP IGNORE_WEIGHTS, SEXP SORT_INPLACE,
-                    SEXP ATTEN_POWER, SEXP TESTING){
+                    SEXP ATTEN_POWER, SEXP SKIP_HLINES, SEXP TESTING){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1700,6 +1713,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int ignore_weights = LOGICAL(IGNORE_WEIGHTS)[0];
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
   const double* atten_power = REAL(ATTEN_POWER);
+  const int skip_header_lines = INTEGER(SKIP_HLINES)[0];
   const int debug = LOGICAL(TESTING)[0];
 
   // timing
@@ -1719,6 +1733,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                                               &num_v, verbose,
                                               is_undirected,
                                               ignore_weights,
+                                              skip_header_lines,
                                               i == num_edgefiles-1);
   }
   fclose_tracked(1);

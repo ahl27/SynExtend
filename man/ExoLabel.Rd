@@ -19,6 +19,7 @@ ExoLabel(edgelistfiles,
               use_fast_sort=TRUE,
               verbose=interactive(),
               sep='\t',
+              header=FALSE,
               tempfiledir=tempdir())
 }
 
@@ -66,6 +67,11 @@ Logical; determines if status messages (output, progress, etc.) should be displa
 \item{sep}{
 Character; expected character that separates entries on a line in each file in \code{edgelistfiles}. Defaults to tab, as would be expected in a \code{.tsv} formatted file. Set to \code{','} for a \code{.csv} file. Also determines the separator used in the output table.
 }
+
+\item{header}{
+Logical or Integer; determines if the first line of edgelist files should be skipped. If logical, \code{TRUE} skips the first line of each file.. If set to an integer \code{n}, skips the first \code{n} lines.
+}
+
 \item{tempfiledir}{
 Character; vector corresponding to the location where temporary files used during execution should be stored. These temporary files are deleted after ExoLabel finishes running.
 }
