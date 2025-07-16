@@ -49,14 +49,10 @@ ExoLabel <- function(edgelistfiles,
                           ignore_weights=FALSE,
                           iterations=0L,
                           return_table=FALSE,
-                          consensus_cluster=FALSE,
                           use_fast_sort=TRUE,
                           verbose=interactive(),
                           sep='\t',
                           tempfiledir=tempdir()){
-  if(consensus_cluster != FALSE || length(consensus_cluster) != 1L){
-    stop("Consensus clustering is currently disabled.")
-  }
   if(return_table){
     maxp <- max(length(add_self_loops),
                 length(attenuation),
@@ -122,18 +118,6 @@ ExoLabel <- function(edgelistfiles,
       stop("file ", f, " has malformed weights")
   }
 
-  if(is.logical(consensus_cluster)){
-    if(consensus_cluster){
-      consensus_cluster <- c(0,0.2,0.4,0.6,0.8,1,1.33,1.67,2)
-    } else {
-      consensus_cluster <- numeric(0L)
-    }
-  } else {
-    if(!is.numeric(consensus_cluster) || any(is.na(consensus_cluster) | is.null(consensus_cluster)))
-      stop("'consensus_cluster' must be a logical or numeric vector")
-    if(any(consensus_cluster < 0))
-      stop("'consensus_cluster' cannot contain negative values")
-  }
   tempfiledir <- normalizePath(tempfiledir, mustWork=TRUE)
   tempfiledir <- file.path(tempfiledir, "ExoLabelTemp")
   if(dir.exists(tempfiledir)){
@@ -173,8 +157,8 @@ ExoLabel <- function(edgelistfiles,
                        tempfiledir, outfile, seps, iterations,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
-                       consensus_cluster, !use_fast_sort,
-                       attenuation, attenuation, FALSE)
+                       !use_fast_sort,
+                       attenuation, FALSE)
   names(graph_stats) <- c("num_vertices", "num_edges")
   for(f in list.files(tempfiledir, full.names=TRUE))
     if(file.exists(f)) file.remove(f)
@@ -262,7 +246,6 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                      attenuation=TRUE,
                      ignore_weights=FALSE,
                      iterations=0L,
-                     consensus_cluster=FALSE,
                      use_fast_sort=TRUE,
                      verbose=FALSE,
                      sep='\t',
@@ -291,13 +274,6 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
       stop("file ", f, " has malformed weights")
   }
 
-  if(is.logical(consensus_cluster)){
-    if(consensus_cluster){
-      consensus_cluster <- c(0,0.2,0.4,0.6,0.8,1,1.33,1.67,2)
-    } else {
-      consensus_cluster <- numeric(0L)
-    }
-  }
   tempfiledir <- normalizePath(tempfiledir, mustWork=TRUE)
   tempfiledir <- file.path(tempfiledir, "ExoLabelTemp")
   if(dir.exists(tempfiledir)){
@@ -343,8 +319,8 @@ EstimateExoLabel <- function(num_v, avg_degree=2, is_undirected=TRUE,
                        tempfiledir, outfile, seps, iterations,
                        verbose_int, is_undirected,
                        add_self_loops, ignore_weights,
-                       consensus_cluster, !use_fast_sort,
-                       attenuation, attenuation, TRUE)
+                       !use_fast_sort,
+                       attenuation, TRUE)
 
   if(verbose){
     cat('\n')

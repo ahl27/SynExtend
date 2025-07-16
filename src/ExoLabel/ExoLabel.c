@@ -274,14 +274,6 @@ static void kahan_accu(double *cur_sum, double *cur_err, double new_val){
   return;
 }
 
-static inline float sigmoid_transform(const float w, const double slope){
-  // should probably expose these at some point
-  const float scale = 0.5;
-  const float cutoff = 0.1;
-  float r = 1 / (1+exp(-1*slope*(w-scale)));
-  return r > cutoff ? r : 0;
-}
-
 static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
   /*
    * Using a compressed representation for weight
@@ -1022,28 +1014,6 @@ static void split_sorted_file(const char* nfilename, const char* wfilename,
   return;
 }
 
-static void copy_weightsfile_sig(const char* dest, const char* src,
-                                  l_uint num_edges, const double w){
-  w_float *restrict wbuf = safe_malloc(FILE_READ_CACHE_SIZE*W_SIZE);
-  FILE *fd = safe_fopen(dest, "wb");
-  FILE *fs = safe_fopen(src, "rb");
-
-  l_uint remaining=num_edges, to_read=0;
-
-  while(remaining){
-    to_read = remaining > FILE_READ_CACHE_SIZE ? FILE_READ_CACHE_SIZE : remaining;
-    safe_fread(wbuf, W_SIZE, to_read, fs);
-    for(l_uint i=0; i<to_read; i++)
-      wbuf[i] = w < 0 ? 0 : sigmoid_transform(wbuf[i], w);
-    safe_fwrite(wbuf, W_SIZE, to_read, fd);
-    remaining -= to_read;
-  }
-
-  free(wbuf);
-  fclose_tracked(2);
-  return;
-}
-
 /******************/
 /* Main Functions */
 /******************/
@@ -1381,7 +1351,7 @@ void cluster_file(const char* weights_fname,
                   const char* neighbor_fname,
                   const l_uint num_v, const int max_iterations, const int v,
                   const float self_loop_weight,
-                  const double atten_pow, const double dist_pow){
+                  const double atten_pow){
   // main runner function to cluster nodes
   FILE *weightsfile = safe_fopen(weights_fname, "rb+");
   FILE *neighborfile = safe_fopen(neighbor_fname, "rb");
@@ -1444,7 +1414,7 @@ void cluster_file(const char* weights_fname,
     // or zero (because seen max_iteration times)
     aq_int num_seen = -1*GLOBAL_queue->seen[next_vert];
     if(!num_seen) num_seen = max_iterations;
-    update_node_cluster(next_vert, self_loop_weight, dist_pow,
+    update_node_cluster(next_vert, self_loop_weight, atten_pow,
                         weightsfile, neighborfile,
                         GLOBAL_queue, atten_param);
   }
@@ -1458,192 +1428,6 @@ void cluster_file(const char* weights_fname,
   free_array_queue(GLOBAL_queue);
   GLOBAL_queue = NULL;
   fclose_tracked(2);
-
-  return;
-}
-
-static void resolve_cluster_consensus(const char* clusters,
-                                      const char* weightsfile, const char* neighborfile,
-                                      l_uint num_v, int num_runs){
-  // overwrite the files with new info
-  FILE *clusts = safe_fopen(clusters, "rb");
-
-  l_uint *read_clusts = safe_malloc(L_SIZE*num_v);
-  l_uint *counts = safe_malloc(L_SIZE*num_v);
-  l_uint *tmp_space = safe_malloc(L_SIZE*num_v);
-  l_uint tmp, total_edges;
-
-  memset(counts, 0, L_SIZE*num_v);
-
-  for(int i=0; i<num_runs; i++){
-    // read in clusters
-    safe_fread(read_clusts, L_SIZE, num_v, clusts);
-
-    // tabulate clusters
-    memset(tmp_space, 0, L_SIZE*num_v);
-    for(l_uint j=0; j<num_v; j++)
-      tmp_space[read_clusts[j]-1]++;
-
-    for(l_uint j=0; j<num_v; j++)
-      // number of elements in this cluster must be at least 1 if this node is in it
-      counts[j] += tmp_space[read_clusts[j]-1] - 1;
-  }
-
-  // convert to cumulative counts
-  tmp = 0;
-  for(l_uint i=0; i<num_v; i++){
-    GLOBAL_all_leaves[i]->edge_start = tmp;
-    tmp += counts[i];
-  }
-  total_edges = tmp;
-
-  // write cumulative counts to file
-  l_uint cur_clust, tmp_ind, num_neighbors;
-  FILE *neighbors = safe_fopen(neighborfile, "wb+");
-
-  // having fwrite problems, I'm going to just set up the file in advance
-  tmp_ind = total_edges;
-  for(l_uint i=0; i<num_v; i++)
-    tmp_space[i] = 0;
-  while(tmp_ind){
-    tmp = tmp_ind > num_v ? num_v : tmp_ind;
-    safe_fwrite(tmp_space, L_SIZE, tmp, neighbors);
-    tmp_ind -= tmp;
-  }
-
-  for(int i=0; i<num_runs; i++){
-    // read in all clusters
-    safe_fread(read_clusts, L_SIZE, num_v, clusts);
-
-    // tabulate clusters
-    for(l_uint j=0; j<num_v; j++){
-      if(!read_clusts[j]) continue;
-
-      tmp = 1;
-      tmp_space[0] = j;
-      cur_clust = read_clusts[j];
-      read_clusts[j] = 0;
-      for(l_uint k=j+1; k<num_v; k++){
-        // can only be later nodes, if it were earlier we would've already caught it
-        if(read_clusts[k] == cur_clust){
-          tmp_space[tmp++] = k;
-          read_clusts[k] = 0;
-        }
-      }
-
-      num_neighbors = tmp-1;
-      if(!num_neighbors) continue;
-      // now all the elements in the same cluster are in tmp_space[0:tmp-1]
-      for(l_uint k=0; k<tmp; k++){
-        // swap the current element to write to the beginning
-        cur_clust = tmp_space[0];
-        tmp_space[0] = tmp_space[k];
-        tmp_space[k] = cur_clust;
-
-        // write all the neighbors to the file
-        cur_clust = tmp_space[0];
-        tmp_ind = GLOBAL_all_leaves[cur_clust]->edge_start;
-
-        // decrement counts first
-        counts[cur_clust] -= num_neighbors;
-
-        // then use it as index
-        tmp_ind += counts[cur_clust];
-
-        // write the weights later
-        fseek(neighbors, tmp_ind*L_SIZE, SEEK_SET);
-        safe_fwrite(&(tmp_space[1]), L_SIZE, num_neighbors, neighbors);
-      }
-    }
-  }
-  fclose_tracked(1);
-
-  free(tmp_space);
-  free(read_clusts);
-  free(counts);
-
-  // write the weights, should think of a better way to do ignore_weights
-  FILE *weights = safe_fopen(weightsfile, "wb");
-  w_float *w = safe_malloc(W_SIZE*FILE_READ_CACHE_SIZE);
-  for(int i=0; i<FILE_READ_CACHE_SIZE; i++)
-    w[i] = 1.0;
-  while(total_edges){
-    tmp = FILE_READ_CACHE_SIZE > total_edges ? total_edges : FILE_READ_CACHE_SIZE;
-    safe_fwrite(w, W_SIZE, tmp, weights);
-    total_edges -= tmp;
-  }
-  free(w);
-  fclose_tracked(2);
-
-  return;
-}
-
-void consensus_cluster_oom(const char* weightsfile,
-                          const char* neighborfile, const char* dir,
-                          const l_uint num_v, const int num_iter, const int v,
-                          const float self_loop_weight,
-                          const double atten_pow, const double dist_pow,
-                          const double* consensus_weights, const int consensus_len){
-  /*
-   * Inputs:
-   *  - weightsfile: weights of each edge
-   *  - neighborfile: neighbors of each edge
-   *
-   * Need to do the following:
-   *  - copy weightsfile
-   *  - apply any weights transformations (can combine with previous step)
-   *  - re-initialize clusters
-   *  - run cluster_file using weights file (clusters stored in trie)
-   *  - store clusters somewhere
-   */
-  const char* transformedweights = create_filename(dir, CONSENSUS_CSRCOPY1);
-  const char* tmpclusterfile = create_filename(dir, CONSENSUS_CLUSTER);
-
-  FILE *dummyclust;
-
-  // need to get the total number of edges
-  l_uint num_edges = GLOBAL_all_leaves[num_v]->edge_start;
-
-  l_uint *clusters = safe_malloc(L_SIZE * num_v);
-  leaf *tmpleaf;
-
-  dummyclust = safe_fopen(tmpclusterfile, "wb");
-  // now we run clustering over consensus_len times
-  for(int i=0; i<consensus_len; i++){
-    if(v >= VERBOSE_BASIC) Rprintf("Iteration %d of %d:\n", i+1, consensus_len);
-
-    // modify weights according to sigmoid transformation
-    if(v >= VERBOSE_BASIC) Rprintf("\tTransforming edge weights...\n");
-    copy_weightsfile_sig(transformedweights, weightsfile, num_edges, consensus_weights[i]);
-
-    // reset cluster values
-    reset_trie_clusters(num_v);
-
-    // cluster with transformed weights
-    cluster_file(transformedweights, neighborfile,
-                  num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
-
-    if(v >= VERBOSE_BASIC) Rprintf("\tRecording results...\n");
-    for(l_uint i=0; i<num_v; i++){
-      tmpleaf = GLOBAL_all_leaves[i];
-      clusters[tmpleaf->index] = tmpleaf->count;
-    }
-
-    // this should be fine assuming 64-bit system
-    // R isn't supported on 32-bit machines, so we know it'll be large enough
-    safe_fwrite(clusters, L_SIZE, num_v, dummyclust);
-  }
-  fclose_tracked(1);
-  free(clusters);
-
-  // now we can just destroy the other files
-  if(v >= VERBOSE_BASIC) Rprintf("Reconciling runs...\n");
-  resolve_cluster_consensus(tmpclusterfile, weightsfile, neighborfile,
-                            num_v, consensus_len);
-
-  if(v >= VERBOSE_BASIC) Rprintf("Clustering on consensus data...\n");
-  reset_trie_clusters(num_v);
-  cluster_file(weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
 
   return;
 }
@@ -1866,9 +1650,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILES,  // more files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
-                    SEXP IGNORE_WEIGHTS, SEXP CONSENSUS_WEIGHTS,
-                    SEXP SORT_INPLACE, SEXP ATTEN_POWER, SEXP DIST_POWER,
-                    SEXP TESTING){
+                    SEXP IGNORE_WEIGHTS, SEXP SORT_INPLACE,
+                    SEXP ATTEN_POWER, SEXP TESTING){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1917,12 +1700,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int ignore_weights = LOGICAL(IGNORE_WEIGHTS)[0];
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
   const double* atten_power = REAL(ATTEN_POWER);
-  const double* dist_power = REAL(DIST_POWER);
   const int debug = LOGICAL(TESTING)[0];
-
-  // consensus stuff
-  const int consensus_len = length(CONSENSUS_WEIGHTS);
-  const double* consensus_w = REAL(CONSENSUS_WEIGHTS);
 
   // timing
   time_t time1, time2;
@@ -2050,16 +1828,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     // this could cause issues if there's a loss in precision in weights
     w_float new_slw;
     decompressEdgeValue(compressEdgeValues(0,0,self_loop_weights[i]).w, NULL, &new_slw);
-    if(consensus_len){
-      consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
-                            num_iter[i], verbose, new_slw,
-                            atten_power[i], dist_power[i],
-                            consensus_w, consensus_len);
-
-    } else {
-      cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
-                    new_slw, atten_power[i], dist_power[i]);
-    }
+    cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
+                    new_slw, atten_power[i]);
     time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
 

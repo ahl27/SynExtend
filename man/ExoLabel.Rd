@@ -16,7 +16,6 @@ ExoLabel(edgelistfiles,
               ignore_weights=FALSE,
               iterations=0L,
               return_table=FALSE,
-              consensus_cluster=FALSE,
               use_fast_sort=TRUE,
               verbose=interactive(),
               sep='\t',
@@ -54,10 +53,6 @@ Integer; maximum number of times to process each node. If set to zero or \code{N
 
 \item{return_table}{
 Logical; determines how the result of clustering is returned. If \code{FALSE} (default), returns a character vector corresponding to the path of \code{outfile}. If \code{TRUE}, parses \code{outfile} using \code{\link{read.table}} and returns the result (not recommended for very large graphs).
-}
-
-\item{consensus_cluster}{
-Logical or Numeric; determines if consensus clustering should be used. \bold{Currently disabled, but will be available in the next release.} If \code{TRUE}, runs the clustering algorithm nine times across varying parameters and forms a consensus clustering based on the agreement of each run. Can be set to a numeric vector to control the number of clusterings. See "Consensus Clustering" below for more information.
 }
 
 \item{use_fast_sort}{
@@ -119,15 +114,6 @@ Reading in the graph object takes a large portion of the processing time. This l
 Multiple clusterings on the same network are supported by passing vectors of input to \code{outfile} and \code{add_self_loops} or \code{attenuation}. If the length of \code{outfile} is greater than 1, \code{add_self_loops} and \code{attenuation} can each be set to either a single value or a vector of the same length as \code{outfile}. For a single value, the same parameter value will be used across all clusterings. For multiple values, the corresponding value will be used in each clustering. See "Examples" for example usage.
 
 Note that the order to process each node is randomly initialized, so multiple runs on the same parameters may produce different results if a random seed is not set.
-}
-
-\section{Consensus Clustering}{
-Consensus clustering is not yet available, but will be enabled in the next release.
-
-%Consensus clustering can be enabled by setting \code{consensus_cluster=TRUE}.
-Consensus clustering runs ExoLabel on the input graph multiple times, transforming weight values according to the sigmoid function \eqn{(1+\exp{(-s(w-\frac{1}{2})})^{-1}}, where \eqn{w} is the original weight and \eqn{s} is the shape parameter.
-
-By default, this runs nine times for shape parameters \code{c(0,0.2,0.4,0.6,0.8,1.0,1.33,1.67,2.0)}, collapsing weights below 0.1 to zero. The resulting clusters form a network such that the edge weight between any two nodes connected in the initial graph is the proportion of clusters they shared over clustering runs. This network is used for a final label propagation run, which identifies the consensus clusters. Users can specify a numeric vector as input to \code{consensus_cluster}, which will override the default shape parameters and number of iterations.
 }
 
 \value{
