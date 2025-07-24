@@ -25,7 +25,7 @@ ExoLabel(edgelistfiles,
 
 \arguments{
 \item{edgelistfiles}{
-Character; vector of files to be processed. Each entry should be a machine-interpretable path to an edgelist file. See Details for expected format.
+Character; vector of files to be processed. Each entry should be a machine-interpretable path to an edgelist file. Plaintext and gzip-compressed files are currently supported. See Details for expected format.
 }
 
 \item{outfile}{
