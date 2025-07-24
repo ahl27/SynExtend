@@ -57,7 +57,7 @@ SEXP MIForSequenceSets(SEXP M1, SEXP M2, SEXP NSEQS, SEXP U1, SEXP U2, SEXP BASE
 SEXP HungarianAssignment(SEXP MATVEC, SEXP DIM);
 void hungarianCleanup(void);
 
-/**** Dendrapply ****/
+/**** dendrapply.c ****/
 void free_dendrapply_list(void);
 SEXP do_dendrapply(SEXP tree, SEXP fn, SEXP env, SEXP order);
 
