@@ -2,6 +2,7 @@
 #define LOSERTREE_H
 
 #include "../SEutils.h"
+#include "FileHandlers.h"
 
 /*
  * This is intended to be a type-unaware LoserTree (Tournament Tree)
@@ -60,12 +61,12 @@ void LT_popOutput(LoserTree *tree);
 void LT_updateTree(LoserTree *tree);
 void LT_refillBin(LoserTree *tree, int bin, int nelem, void *input);
 size_t LT_dumpOutput(LoserTree *tree, void *output_buffer);
-size_t LT_fdumpOutput(LoserTree *tree, FILE *f);
+size_t LT_fdumpOutput(LoserTree *tree, file_t *f);
 size_t LT_fdumpOutputInplace(LoserTree *tree, size_t block_end,
-                            FILE *f, long int *remaining, long int **offsets);
-int LT_runFileGame(LoserTree *tree, FILE *f);
+                            file_t *f, long int *remaining, long int **offsets);
+int LT_runFileGame(LoserTree *tree, file_t *f);
 int LT_runInplaceFileGame(LoserTree *tree, size_t block_end,
-                          FILE *f, long int *remaining, long int **offsets);
+                          file_t *f, long int *remaining, long int **offsets);
 void LT_free(LoserTree *tree);
 
 #endif

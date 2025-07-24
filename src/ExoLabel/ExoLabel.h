@@ -1,6 +1,7 @@
 #include "../SEutils.h"
 #include "PrefixTrie.h"
 #include "LoserTree.h"
+#include "FileHandlers.h"
 #include <time.h>
 
 // includes for file truncation
