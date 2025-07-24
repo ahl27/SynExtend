@@ -165,7 +165,7 @@ void LT_updateTree(LoserTree *tree){
   return;
 }
 
-int LT_runFileGame(LoserTree *tree, FILE *f){
+int LT_runFileGame(LoserTree *tree, file_t *f){
   /*
    * this function will run games until a bin is emptied
    * when this happens, control returns to the caller to
@@ -187,7 +187,7 @@ int LT_runFileGame(LoserTree *tree, FILE *f){
 }
 
 int LT_runInplaceFileGame(LoserTree *tree, size_t block_end,
-                          FILE *f, long int *remaining, long int **offsets){
+                          file_t *f, long int *remaining, long int **offsets){
   /*
    * Same as LT_runFileGame(), but does it in-place
    */
@@ -214,12 +214,12 @@ size_t LT_dumpOutput(LoserTree *tree, void *output_buffer){
   return nbytes;
 }
 
-size_t LT_fdumpOutput(LoserTree *tree, FILE *f){
+size_t LT_fdumpOutput(LoserTree *tree, file_t *f){
   // dumps loser tree output buffer to a file
   // assume f is a valid file
   size_t to_write = tree->cur_output_i;
   if (!to_write) return 0;
-  size_t nwrote = fwrite(tree->output, tree->e_size, to_write, f);
+  size_t nwrote = safe_fwrite(tree->output, tree->e_size, to_write, f);
   if(nwrote != to_write)
     error("Failed to write to file! (tried to write %zu elements, wrote %zu elements)",
       to_write, nwrote);
@@ -228,7 +228,7 @@ size_t LT_fdumpOutput(LoserTree *tree, FILE *f){
   return nwrote;
 }
 
-static void reorganize_blocks(LoserTree *tree, size_t block_end, FILE *f,
+static void reorganize_blocks(LoserTree *tree, size_t block_end, file_t *f,
                         long int *remaining, long int **offsets){
   /*
    * Move all unprocessed blocks to the end of the current region
@@ -257,9 +257,9 @@ static void reorganize_blocks(LoserTree *tree, size_t block_end, FILE *f,
         if(read_end < offs[i] + to_read) to_read = read_end - offs[i];
         read_start = read_end - to_read;
         write_start = write_end - to_read;
-        fseek(f, read_start*size, SEEK_SET);
+        safe_fseek(f, read_start*size, SEEK_SET);
         safe_fread(scratch_buf, size, to_read, f);
-        fseek(f, write_start*size, SEEK_SET);
+        safe_fseek(f, write_start*size, SEEK_SET);
         safe_fwrite(scratch_buf, size, to_read, f);
         read_end = read_start;
         write_end = write_start;
@@ -274,7 +274,7 @@ static void reorganize_blocks(LoserTree *tree, size_t block_end, FILE *f,
 
 
 size_t LT_fdumpOutputInplace(LoserTree *tree, size_t block_end,
-                            FILE *f, long int *remaining, long int **offsets){
+                            file_t *f, long int *remaining, long int **offsets){
   /*
    * Function to dump output in-place
    * Requires a bunch of extra values so we can keep track of stuff
@@ -301,7 +301,7 @@ size_t LT_fdumpOutputInplace(LoserTree *tree, size_t block_end,
     reorganize_blocks(tree, block_end, f, remaining, offsets);
 
   // reset the writing pointer
-  fseek(f, (tree->nwritten)*size, SEEK_SET);
+  safe_fseek(f, (tree->nwritten)*size, SEEK_SET);
   LT_fdumpOutput(tree, f);
 
   return 0;

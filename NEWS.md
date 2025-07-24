@@ -1,3 +1,20 @@
+# SynExtend 1.21.2
+* Deprecated consensus clustering removed from `ExoLabel`
+* `ExoLabel` now supports argument `header=c(FALSE, TRUE, integer(1L))` to skip the first 0,1,n lines of each file (respectively)
+* `ExoLabel` now supports gzip-compressed files as input
+* Some examples in man pages have been made faster
+
+# SynExtend 1.21.1
+* Internal code reorganization for `ExoLabel`
+* Further arguments to `SuperTree` now correctly passthrough to `Treeline`
+* Some deprecated arguments to `EvoWeaver` have been removed
+
+# SynExtend 1.21.0
+* First development version of Bioconductor 3.22
+
+# SynExtend 1.20.0
+* Official Bioconductor 3.21 release
+
 # SynExtend 1.19.11
 * Fixes bug where `ExoLabel` wouldn't handle multiple files correctly
 * `ExoLabel` now reads in networks roughly twice as fast

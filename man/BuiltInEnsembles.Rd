@@ -26,18 +26,19 @@ See the examples for how to train your own ensemble model.
 \examples{
 ## Training own ensemble method to avoid using built-ins
 ## defaults to built-ins when an ensemble isn't provided
-
+set.seed(333L)
 exData <- get(data("ExampleStreptomycesData"))
-ew <- EvoWeaver(exData$Genes[seq_len(50L)], MySpeciesTree=exData$Tree)
+ew <- EvoWeaver(exData$Genes[seq_len(8L)], MySpeciesTree=exData$Tree, NoWarn=TRUE)
 datavals <- predict(ew, NoPrediction=TRUE, Verbose=interactive())
+datavals <- datavals[datavals[,1] != datavals[,2],]
 
 # Picking random numbers for demonstration purposes
-actual_values <- sample(c(0,1), nrow(datavals), replace=TRUE)
+actual_values <- sample(rep(c(1,0), length.out=nrow(datavals)))
 datavals[,'y'] <- actual_values
 myModel <- glm(y~., datavals[,-c(1,2)], family='binomial')
 
-predictionPW <- EvoWeaver(exData$Genes[51:60], MySpeciesTree=exData$Tree)
+predictionPW <- EvoWeaver(exData$Genes[9:10], MySpeciesTree=exData$Tree, NoWarn=TRUE)
 predict(predictionPW,
-          PretrainedModel=myModel, Verbose=interactive())
+          PretrainedModel=myModel, Verbose=interactive())[2,,drop=FALSE]
 }
 \keyword{datasets}
