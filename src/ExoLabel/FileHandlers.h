@@ -1,14 +1,19 @@
-#ifndef FHANDLE_FILE
-#define FHANDLE_FILE
+#ifndef FHANDLE_FILE_H
+#define FHANDLE_FILE_H
 
 #include <zlib.h>
-#include "../SEutils.h" // for safe_malloc
+
+#ifdef COMPILING_SYNEXTEND_VIA_R
+  #include "../SEutils.h" // for safe_malloc
+#else
+  #include "FallbackDefines.h"
+#endif
+
 
 /******************
  * Functions to abstract file access interfaces
- * Note that these do NOT do error checking for read/write failures
- * These methods should be called via safe_fread, safe_fwrite, etc.,
- * since those calls do ensure the correct number of bytes are read/written
+ * Note that no function is provided to replace truncate_file
+ * If this is necessary it will need to be implemented
  ******************/
 
 

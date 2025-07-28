@@ -1,4 +1,4 @@
-PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS)
+PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS) -DCOMPILING_SYNEXTEND_VIA_R
 PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 
 # C source files
@@ -9,6 +9,7 @@ PKG_C_SOURCES = \
   dendrapply.c \
   HitConsensus.c \
   HungarianAlgo.c \
+  HitConsensus.c \
   MoranI.c \
   NucleotideCounts.c \
   R_init_synextend.c \

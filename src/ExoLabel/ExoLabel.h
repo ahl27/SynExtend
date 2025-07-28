@@ -1,4 +1,12 @@
-#include "../SEutils.h"
+#ifndef EXOLABEL_H
+#define EXOLABEL_H
+
+#ifdef COMPILING_SYNEXTEND_VIA_R
+  #include "../SEutils.h"
+#else
+  #include "FallbackDefines.h"
+#endif
+
 #include "PrefixTrie.h"
 #include "LoserTree.h"
 #include "FileHandlers.h"
@@ -96,3 +104,5 @@ void cluster_file(const char* weights_fname,
                   const l_uint num_v, const int max_iterations, const int v,
                   const float self_loop_weight,
                   const double atten_pow);
+
+#endif
