@@ -4,7 +4,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "../SEutils.h"
+
+#ifdef COMPILING_SYNEXTEND_VIA_R
+	#include "../SEutils.h"
+#else
+	#include "FallbackDefines.h"
+#endif
 
 // testing includes
 //#include <stdio.h>
@@ -35,4 +40,5 @@ typedef struct prefix {
 prefix *initialize_trie(void);
 trie_uint find_index_for_prefix_and_increment(char *s, prefix *trie, trie_uint* ctr, int should_increment);
 void free_trie(prefix *trie);
+
 #endif

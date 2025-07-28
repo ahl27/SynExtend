@@ -1,8 +1,14 @@
-#ifndef FHANDLE_FILE
-#define FHANDLE_FILE
+#ifndef FHANDLE_FILE_H
+#define FHANDLE_FILE_H
 
 #include <zlib.h>
-#include "../SEutils.h" // for safe_malloc
+
+#ifdef COMPILING_SYNEXTEND_VIA_R
+  #include "../SEutils.h" // for safe_malloc
+#else
+  #include "FallbackDefines.h"
+#endif
+
 
 /******************
  * Functions to abstract file access interfaces

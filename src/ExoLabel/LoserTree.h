@@ -1,7 +1,12 @@
 #ifndef LOSERTREE_H
 #define LOSERTREE_H
 
-#include "../SEutils.h"
+#ifdef COMPILING_SYNEXTEND_VIA_R
+  #include "../SEutils.h"
+#else
+  #include "FallbackDefines.h"
+#endif
+
 #include "FileHandlers.h"
 
 /*
