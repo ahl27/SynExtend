@@ -1,6 +1,7 @@
 #include "../SEutils.h"
 #include "PrefixTrie.h"
 #include "LoserTree.h"
+#include "FileHandlers.h"
 #include <time.h>
 
 // includes for file truncation
@@ -58,8 +59,6 @@ static const int BITS_FOR_EXP = 4;
 static const double MIN_DOUBLE = -1 * DBL_MIN;
 static const int L_SIZE = sizeof(l_uint);
 static const int W_SIZE = sizeof(w_float);
-static const char CONSENSUS_CSRCOPY1[] = "tmpcsr1";
-static const char CONSENSUS_CLUSTER[] = "tmpclust";
 
 /*
  * Some comments on external sorting performance:
@@ -96,11 +95,4 @@ void cluster_file(const char* weights_fname,
                   const char* neighbor_fname,
                   const l_uint num_v, const int max_iterations, const int v,
                   const float self_loop_weight,
-                  const double atten_pow, const double dist_pow);
-
-void consensus_cluster_oom(const char* weightsfile,
-                          const char* neighborfile, const char* dir,
-                          const l_uint num_v, const int num_iter, const int v,
-                          const float self_loop_weight,
-                          const double atten_pow, const double dist_pow,
-                          const double* consensus_weights, const int consensus_len);
+                  const double atten_pow);

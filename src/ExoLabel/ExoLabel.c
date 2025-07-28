@@ -93,7 +93,7 @@ static int GLOBAL_nfiles = 0;
 static l_uint CLUST_MAP_CTR = 0;
 static ArrayQueue *GLOBAL_queue = NULL;
 static prefix *GLOBAL_trie = NULL;
-static FILE **GLOBAL_ftracker = NULL; // holds file POINTERS
+static file_t **GLOBAL_ftracker = NULL; // holds file POINTERS
 static int GLOBAL_num_files = 0;
 static int GLOBAL_nbuffers = 0;
 static void **GLOBAL_mergebuffers = NULL;
@@ -274,14 +274,6 @@ static void kahan_accu(double *cur_sum, double *cur_err, double new_val){
   return;
 }
 
-static inline float sigmoid_transform(const float w, const double slope){
-  // should probably expose these at some point
-  const float scale = 0.5;
-  const float cutoff = 0.1;
-  float r = 1 / (1+exp(-1*slope*(w-scale)));
-  return r > cutoff ? r : 0;
-}
-
 static edge compressEdgeValues(l_uint v1, l_uint v2, double weight){
   /*
    * Using a compressed representation for weight
@@ -370,8 +362,8 @@ static void safe_filepath_cat(const char *dir, const char *f, char *fname, size_
   return;
 }
 
-static FILE* safe_fopen(const char *filename, const char *mode){
-  FILE *f = fopen(filename, mode);
+static file_t* fopen_tracked(const char *filename, const char *mode, const int fileformat){
+  file_t *f = safe_fopen(filename, mode, fileformat);
   GLOBAL_ftracker[GLOBAL_num_files++] = f;
   return f;
 }
@@ -381,11 +373,11 @@ static void fclose_tracked(int nfiles){
   if(nfiles > GLOBAL_num_files) error("attempted to close more files than were open!");
   // going to use a PROTECT-like strategy
   // just close the top N files
-  FILE *f;
+  file_t *f;
   for(int i=0; i<nfiles; i++){
     // check to make sure we dont fclose(NULL)
     f = GLOBAL_ftracker[--GLOBAL_num_files];
-    if(f) fclose(f);
+    if(f) safe_fclose(f);
   }
   return;
 }
@@ -468,7 +460,7 @@ void cleanup_ondisklp_global_values(){
 }
 
 static inline char get_buffchar(char *buf, size_t bufsize, size_t *cur_ind,
-                                size_t *remaining, FILE *stream){
+                                size_t *remaining, file_t *stream){
   /*
    * buffered reading
    * if elements are in the buffer, returns the next buffered element
@@ -477,19 +469,20 @@ static inline char get_buffchar(char *buf, size_t bufsize, size_t *cur_ind,
 
   if(*cur_ind == *remaining){
     *cur_ind = 0;
-    *remaining = fread(buf, 1, bufsize, stream);
+    *remaining = unsafe_fread(buf, 1, bufsize, stream);
   }
   return *remaining ? buf[(*cur_ind)++] : 0;
 }
 
 static void truncate_file(const char* fname, size_t size){
   // not guaranteed to work, but not a big deal if it doesn't
+  // note that this uses UNSAFE FILE HANDLERS
   int retval = 0;
 #ifdef HAVE_UNISTD_H
   retval = truncate(fname, size);
 #else
   #ifdef WIN32
-    FILE* f = fopen(fname, "rb+");
+    file_t* f = fopen(fname, "rb+");
     int filehandler = _fileno(f);
     retval = _chsize_s(filehandler, size);
     fclose(f);
@@ -574,7 +567,7 @@ static void kway_mergesort_file_inplace(const char* f1,
    */
 
   // file should already be sorted into x blocks of size block_size*element_size
-  FILE *fileptr;
+  file_t *fileptr;
 
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
@@ -607,7 +600,7 @@ static void kway_mergesort_file_inplace(const char* f1,
   offsets = safe_calloc(LT_total_bins, sizeof(long int));
   remaining = safe_calloc(LT_total_bins, sizeof(long int));
 
-  fileptr = safe_fopen(f1, "rb+");
+  fileptr = fopen_tracked(f1, "rb+", UNCOMPRESSED);
 
   while(block_size < nlines){
     cur_progress = 0.0;
@@ -645,7 +638,7 @@ static void kway_mergesort_file_inplace(const char* f1,
       // load data into the buffers and assign into tree
       for(int i=0; i<num_bins; i++){
         if(remaining[i]){
-          fseek(fileptr, offsets[i]*element_size, SEEK_SET);
+          safe_fseek(fileptr, offsets[i]*element_size, SEEK_SET);
           to_read = remaining[i] > buf_size ? buf_size : remaining[i];
           safe_fread(buffers[i], element_size, to_read, fileptr);
           LT_fillBin(mergetree, i, to_read, buffers[i]);
@@ -663,7 +656,7 @@ static void kway_mergesort_file_inplace(const char* f1,
         // refill the bin
         to_read = 0;
         if(remaining[empty_bin]){
-          fseek(fileptr, offsets[empty_bin]*element_size, SEEK_SET);
+          safe_fseek(fileptr, offsets[empty_bin]*element_size, SEEK_SET);
           to_read = remaining[empty_bin] > buf_size ? buf_size : remaining[empty_bin];
           safe_fread(buffers[empty_bin], element_size, to_read, fileptr);
           remaining[empty_bin] -= to_read;
@@ -675,7 +668,7 @@ static void kway_mergesort_file_inplace(const char* f1,
           prev_progress = cur_progress;
           if(verbose == VERBOSE_ALL){
             if(tmpniter == 1){
-              cur_fsize = ftell(fileptr);
+              cur_fsize = safe_ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
@@ -693,7 +686,7 @@ static void kway_mergesort_file_inplace(const char* f1,
       // finally, call fdumpOutput to dump any remaining values
       // this doesn't need to call fdumpOutputInplace because there are no
       // values left to be saved from this block
-      fseek(fileptr, (mergetree->nwritten)*element_size, SEEK_SET);
+      safe_fseek(fileptr, (mergetree->nwritten)*element_size, SEEK_SET);
       LT_fdumpOutput(mergetree, fileptr);
       cur_progress = ((double)mergetree->nwritten)/nlines*100.0;
 
@@ -701,7 +694,7 @@ static void kway_mergesort_file_inplace(const char* f1,
           prev_progress = cur_progress;
           if(verbose == VERBOSE_ALL){
             if(tmpniter == 1){
-              cur_fsize = ftell(fileptr);
+              cur_fsize = safe_ftell(fileptr);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
@@ -716,10 +709,10 @@ static void kway_mergesort_file_inplace(const char* f1,
     mergetree->nwritten = 0;
     block_size *= num_bins;
     if(block_size >= nlines){
-      cur_fsize = ftell(fileptr);
+      cur_fsize = safe_ftell(fileptr);
       if(cur_fsize > max_fsize) max_fsize = cur_fsize;
     }
-    rewind(fileptr);
+    safe_rewind(fileptr);
   }
   // cur_source will always be the file we just WROTE to here
 
@@ -766,7 +759,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
 
   // file should already be sorted into x blocks of size block_size*element_size
 
-  FILE *file1, *file2;
+  file_t *file1, *file2;
 
   LoserTree *mergetree = LT_alloc(num_bins, output_size, element_size, compar);
   GLOBAL_mergetree = mergetree;
@@ -815,8 +808,8 @@ static void kway_mergesort_file(const char* f1, const char* f2,
     }
     R_CheckUserInterrupt();
 
-    file1 = safe_fopen(cur_source, "rb");
-    file2 = safe_fopen(cur_target, "wb");
+    file1 = fopen_tracked(cur_source, "rb", UNCOMPRESSED);
+    file2 = fopen_tracked(cur_target, "wb", UNCOMPRESSED);
 
     // number of blocks
     nblocks = nlines / block_size + !!(nlines % block_size);
@@ -839,7 +832,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
       // load data into the buffers and assign into tree
       for(int i=0; i<num_bins; i++){
         if(remaining[i]){
-          fseek(file1, offsets[i]*element_size, SEEK_SET);
+          safe_fseek(file1, offsets[i]*element_size, SEEK_SET);
           to_read = remaining[i] > buf_size ? buf_size : remaining[i];
           safe_fread(buffers[i], to_read, element_size, file1);
           LT_fillBin(mergetree, i, to_read, buffers[i]);
@@ -855,7 +848,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
         // refill the bin
         to_read = 0;
         if(remaining[empty_bin]){
-          fseek(file1, offsets[empty_bin]*element_size, SEEK_SET);
+          safe_fseek(file1, offsets[empty_bin]*element_size, SEEK_SET);
           to_read = remaining[empty_bin] > buf_size ? buf_size : remaining[empty_bin];
           safe_fread(buffers[empty_bin], to_read, element_size, file1);
           remaining[empty_bin] -= to_read;
@@ -866,7 +859,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
           prev_progress = cur_progress;
           if(verbose == VERBOSE_ALL){
             if(tmpniter == 1){
-              cur_fsize = ftell(file1) + ftell(file2);
+              cur_fsize = safe_ftell(file1) + safe_ftell(file2);
               if(cur_fsize > max_fsize) max_fsize = cur_fsize;
             }
             Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
@@ -885,7 +878,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
         prev_progress = cur_progress;
         if(verbose == VERBOSE_ALL){
           if(tmpniter == 1){
-            cur_fsize = ftell(file1) + ftell(file2);
+            cur_fsize = safe_ftell(file1) + safe_ftell(file2);
             if(cur_fsize > max_fsize) max_fsize = cur_fsize;
           }
           Rprintf("\tIteration %" lu_fprint " of %" lu_fprint " (%5.01f%% Complete, used ",
@@ -902,7 +895,7 @@ static void kway_mergesort_file(const char* f1, const char* f2,
     mergetree->nwritten = 0;
     block_size *= num_bins;
     if(block_size >= nlines){
-      cur_fsize = ftell(file1) + ftell(file2);
+      cur_fsize = safe_ftell(file1) + safe_ftell(file2);
       if(cur_fsize > max_fsize) max_fsize = cur_fsize;
     }
     fclose_tracked(2);
@@ -952,9 +945,9 @@ static void split_sorted_file(const char* nfilename, const char* wfilename,
   double *valuebuffer = safe_malloc(L_SIZE * FILE_READ_CACHE_SIZE);
   edge *edgebuffer = safe_malloc(sizeof(edge)*FILE_READ_CACHE_SIZE);
 
-  FILE *f_r, *f_w;
-  f_r = safe_fopen(nfilename, "rb");
-  f_w = safe_fopen(nfilename, "rb+"); // wb will delete the file
+  file_t *f_r, *f_w;
+  f_r = fopen_tracked(nfilename, "rb", UNCOMPRESSED);
+  f_w = fopen_tracked(nfilename, "rb+", UNCOMPRESSED); // wb will delete the file
 
   l_uint cur_line = 0;
   l_uint nread = 0;
@@ -978,10 +971,10 @@ static void split_sorted_file(const char* nfilename, const char* wfilename,
   // reduce file size to reclaim the wasted space
   truncate_file(nfilename, L_SIZE*nlines);
 
-  FILE *wf_w;
-  f_r = safe_fopen(nfilename, "rb");
-  f_w = safe_fopen(nfilename, "rb+");
-  wf_w = safe_fopen(wfilename, "wb");
+  file_t *wf_w;
+  f_r = fopen_tracked(nfilename, "rb", UNCOMPRESSED);
+  f_w = fopen_tracked(nfilename, "rb+", UNCOMPRESSED);
+  wf_w = fopen_tracked(wfilename, "wb", UNCOMPRESSED);
 
   free(edgebuffer);
   w_float *weights = safe_malloc(W_SIZE * FILE_READ_CACHE_SIZE);
@@ -1019,28 +1012,6 @@ static void split_sorted_file(const char* nfilename, const char* wfilename,
   free(indices);
   free(valuebuffer);
 
-  return;
-}
-
-static void copy_weightsfile_sig(const char* dest, const char* src,
-                                  l_uint num_edges, const double w){
-  w_float *restrict wbuf = safe_malloc(FILE_READ_CACHE_SIZE*W_SIZE);
-  FILE *fd = safe_fopen(dest, "wb");
-  FILE *fs = safe_fopen(src, "rb");
-
-  l_uint remaining=num_edges, to_read=0;
-
-  while(remaining){
-    to_read = remaining > FILE_READ_CACHE_SIZE ? FILE_READ_CACHE_SIZE : remaining;
-    safe_fread(wbuf, W_SIZE, to_read, fs);
-    for(l_uint i=0; i<to_read; i++)
-      wbuf[i] = w < 0 ? 0 : sigmoid_transform(wbuf[i], w);
-    safe_fwrite(wbuf, W_SIZE, to_read, fd);
-    remaining -= to_read;
-  }
-
-  free(wbuf);
-  fclose_tracked(2);
   return;
 }
 
@@ -1090,11 +1061,12 @@ static void reset_trie_clusters(l_uint num_v){
 }
 
 static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
-                                  FILE* neighbortable,
+                                  file_t* neighbortable,
                                   const char sep, const char linesep,
                                   l_uint* num_v, int v,
                                   const int is_undirected,
                                   const int ignore_weights,
+                                  const int skip_header_lines,
                                   int is_final_file){
   /*
    * This combines reading nodes and edges
@@ -1130,15 +1102,28 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
   vname[1] = safe_malloc(MAX_NODE_NAME_SIZE);
   if(!ignore_weights) weight_buf = safe_malloc(MAX_NODE_NAME_SIZE);
 
-  FILE *edgelist = safe_fopen(edgefile, "rb");
+  // auto-infer the type of input file
+  file_t *edgelist = fopen_tracked(edgefile, "rb", UNKNOWN);
 
   // note: weights/neighbors don't need to be initialized
   // see https://stackoverflow.com/questions/31642389/fseek-a-newly-created-file
 
   if(v >= VERBOSE_BASIC) Rprintf("\tReading file %s...\n", edgefile);
 
-  char c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
-  while(!feof(edgelist) || remaining){ // file isn't done OR buffer has data
+  // skip first n lines of the file
+  char c;
+  for(int i=0; i<skip_header_lines && (remaining || !safe_feof(edgelist)); i++){
+    // c is NULL or at the linesep, we have to advance it forward by one element
+    c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+
+    // skip a complete line
+    while(c != linesep && (remaining || !safe_feof(edgelist)))
+      c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+  }
+
+  // advance one element (first element of first unskipped line)
+  c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
+  while(!safe_feof(edgelist) || remaining){ // file isn't done OR buffer has data
     // read in the two vertex names
     for(int i=0; i<2; i++){
       stringctr = 0;
@@ -1167,7 +1152,7 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
       memset(weight_buf, 0, MAX_NODE_NAME_SIZE);
 
       // need the double check in case user forgets a trailing \n
-      while(c != linesep && (remaining || !feof(edgelist))){
+      while(c != linesep && (remaining || !safe_feof(edgelist))){
         if(stringctr == MAX_NODE_NAME_SIZE)
           error("Incomplete entry read (suspect line %" lu_fprint ")", print_counter+1);
         weight_buf[stringctr++] = c;
@@ -1176,7 +1161,7 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
       weight = atof(weight_buf);
     } else {
       weight = 1.0;
-      while(c != linesep && (remaining || !feof(edgelist)))
+      while(c != linesep && (remaining || !safe_feof(edgelist)))
         c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
     }
 
@@ -1197,7 +1182,7 @@ static l_uint csr_compress_edgelist_trie(const char* edgefile, prefix *trie,
 
     // advance one past the separator
     c = get_buffchar(read_cache, rc_size, &rcache_i, &remaining, edgelist);
-    if((GLOBAL_cachectr+is_undirected) >= FILE_READ_CACHE_SIZE || (is_final_file && feof(edgelist) && !remaining)){
+    if((GLOBAL_cachectr+is_undirected) >= FILE_READ_CACHE_SIZE || (is_final_file && safe_feof(edgelist) && !remaining)){
       // sort the block and write it to the neighbors file
       qsort(GLOBAL_readedges, GLOBAL_cachectr, sizeof(edge), fast_edge_compar);
       nedges += safe_fwrite(GLOBAL_readedges, sizeof(edge), GLOBAL_cachectr, neighbortable);
@@ -1253,7 +1238,7 @@ static void add_remaining_to_queue(l_uint new_clust, leaf **neighbors,
 
 static void update_node_cluster(l_uint ind,
                           float self_loop_weight, float dist_pow,
-                          FILE *weightsfile, FILE *neighborfile,
+                          file_t *weightsfile, file_t *neighborfile,
                           ArrayQueue *queue, float atten_param){
   /*
    * Determine number of edges using the table file (next - cur)
@@ -1290,8 +1275,8 @@ static void update_node_cluster(l_uint ind,
   sufficient_weight = safe_malloc(num_edges);
 
   // read in the edges
-  fseek(weightsfile, start*W_SIZE, SEEK_SET);
-  fseek(neighborfile, start*L_SIZE, SEEK_SET);
+  safe_fseek(weightsfile, start*W_SIZE, SEEK_SET);
+  safe_fseek(neighborfile, start*L_SIZE, SEEK_SET);
 
   // these are the indexes and weights of the neighbors
   safe_fread(indices, L_SIZE, num_edges, neighborfile);
@@ -1381,10 +1366,10 @@ void cluster_file(const char* weights_fname,
                   const char* neighbor_fname,
                   const l_uint num_v, const int max_iterations, const int v,
                   const float self_loop_weight,
-                  const double atten_pow, const double dist_pow){
+                  const double atten_pow){
   // main runner function to cluster nodes
-  FILE *weightsfile = safe_fopen(weights_fname, "rb+");
-  FILE *neighborfile = safe_fopen(neighbor_fname, "rb");
+  file_t *weightsfile = fopen_tracked(weights_fname, "rb+", UNCOMPRESSED);
+  file_t *neighborfile = fopen_tracked(neighbor_fname, "rb", UNCOMPRESSED);
 
   const char* progress[] = {"|o-----|", "|-o----|", "|--o---|", "|---o--|", "|----o-|", "|-----o|",
                             "|-----o|", "|----o-|", "|---o--|", "|--o---|", "|-o----|", "|o-----|"};
@@ -1444,7 +1429,7 @@ void cluster_file(const char* weights_fname,
     // or zero (because seen max_iteration times)
     aq_int num_seen = -1*GLOBAL_queue->seen[next_vert];
     if(!num_seen) num_seen = max_iterations;
-    update_node_cluster(next_vert, self_loop_weight, dist_pow,
+    update_node_cluster(next_vert, self_loop_weight, atten_pow,
                         weightsfile, neighborfile,
                         GLOBAL_queue, atten_param);
   }
@@ -1462,193 +1447,7 @@ void cluster_file(const char* weights_fname,
   return;
 }
 
-static void resolve_cluster_consensus(const char* clusters,
-                                      const char* weightsfile, const char* neighborfile,
-                                      l_uint num_v, int num_runs){
-  // overwrite the files with new info
-  FILE *clusts = safe_fopen(clusters, "rb");
-
-  l_uint *read_clusts = safe_malloc(L_SIZE*num_v);
-  l_uint *counts = safe_malloc(L_SIZE*num_v);
-  l_uint *tmp_space = safe_malloc(L_SIZE*num_v);
-  l_uint tmp, total_edges;
-
-  memset(counts, 0, L_SIZE*num_v);
-
-  for(int i=0; i<num_runs; i++){
-    // read in clusters
-    safe_fread(read_clusts, L_SIZE, num_v, clusts);
-
-    // tabulate clusters
-    memset(tmp_space, 0, L_SIZE*num_v);
-    for(l_uint j=0; j<num_v; j++)
-      tmp_space[read_clusts[j]-1]++;
-
-    for(l_uint j=0; j<num_v; j++)
-      // number of elements in this cluster must be at least 1 if this node is in it
-      counts[j] += tmp_space[read_clusts[j]-1] - 1;
-  }
-
-  // convert to cumulative counts
-  tmp = 0;
-  for(l_uint i=0; i<num_v; i++){
-    GLOBAL_all_leaves[i]->edge_start = tmp;
-    tmp += counts[i];
-  }
-  total_edges = tmp;
-
-  // write cumulative counts to file
-  l_uint cur_clust, tmp_ind, num_neighbors;
-  FILE *neighbors = safe_fopen(neighborfile, "wb+");
-
-  // having fwrite problems, I'm going to just set up the file in advance
-  tmp_ind = total_edges;
-  for(l_uint i=0; i<num_v; i++)
-    tmp_space[i] = 0;
-  while(tmp_ind){
-    tmp = tmp_ind > num_v ? num_v : tmp_ind;
-    safe_fwrite(tmp_space, L_SIZE, tmp, neighbors);
-    tmp_ind -= tmp;
-  }
-
-  for(int i=0; i<num_runs; i++){
-    // read in all clusters
-    safe_fread(read_clusts, L_SIZE, num_v, clusts);
-
-    // tabulate clusters
-    for(l_uint j=0; j<num_v; j++){
-      if(!read_clusts[j]) continue;
-
-      tmp = 1;
-      tmp_space[0] = j;
-      cur_clust = read_clusts[j];
-      read_clusts[j] = 0;
-      for(l_uint k=j+1; k<num_v; k++){
-        // can only be later nodes, if it were earlier we would've already caught it
-        if(read_clusts[k] == cur_clust){
-          tmp_space[tmp++] = k;
-          read_clusts[k] = 0;
-        }
-      }
-
-      num_neighbors = tmp-1;
-      if(!num_neighbors) continue;
-      // now all the elements in the same cluster are in tmp_space[0:tmp-1]
-      for(l_uint k=0; k<tmp; k++){
-        // swap the current element to write to the beginning
-        cur_clust = tmp_space[0];
-        tmp_space[0] = tmp_space[k];
-        tmp_space[k] = cur_clust;
-
-        // write all the neighbors to the file
-        cur_clust = tmp_space[0];
-        tmp_ind = GLOBAL_all_leaves[cur_clust]->edge_start;
-
-        // decrement counts first
-        counts[cur_clust] -= num_neighbors;
-
-        // then use it as index
-        tmp_ind += counts[cur_clust];
-
-        // write the weights later
-        fseek(neighbors, tmp_ind*L_SIZE, SEEK_SET);
-        safe_fwrite(&(tmp_space[1]), L_SIZE, num_neighbors, neighbors);
-      }
-    }
-  }
-  fclose_tracked(1);
-
-  free(tmp_space);
-  free(read_clusts);
-  free(counts);
-
-  // write the weights, should think of a better way to do ignore_weights
-  FILE *weights = safe_fopen(weightsfile, "wb");
-  w_float *w = safe_malloc(W_SIZE*FILE_READ_CACHE_SIZE);
-  for(int i=0; i<FILE_READ_CACHE_SIZE; i++)
-    w[i] = 1.0;
-  while(total_edges){
-    tmp = FILE_READ_CACHE_SIZE > total_edges ? total_edges : FILE_READ_CACHE_SIZE;
-    safe_fwrite(w, W_SIZE, tmp, weights);
-    total_edges -= tmp;
-  }
-  free(w);
-  fclose_tracked(2);
-
-  return;
-}
-
-void consensus_cluster_oom(const char* weightsfile,
-                          const char* neighborfile, const char* dir,
-                          const l_uint num_v, const int num_iter, const int v,
-                          const float self_loop_weight,
-                          const double atten_pow, const double dist_pow,
-                          const double* consensus_weights, const int consensus_len){
-  /*
-   * Inputs:
-   *  - weightsfile: weights of each edge
-   *  - neighborfile: neighbors of each edge
-   *
-   * Need to do the following:
-   *  - copy weightsfile
-   *  - apply any weights transformations (can combine with previous step)
-   *  - re-initialize clusters
-   *  - run cluster_file using weights file (clusters stored in trie)
-   *  - store clusters somewhere
-   */
-  const char* transformedweights = create_filename(dir, CONSENSUS_CSRCOPY1);
-  const char* tmpclusterfile = create_filename(dir, CONSENSUS_CLUSTER);
-
-  FILE *dummyclust;
-
-  // need to get the total number of edges
-  l_uint num_edges = GLOBAL_all_leaves[num_v]->edge_start;
-
-  l_uint *clusters = safe_malloc(L_SIZE * num_v);
-  leaf *tmpleaf;
-
-  dummyclust = safe_fopen(tmpclusterfile, "wb");
-  // now we run clustering over consensus_len times
-  for(int i=0; i<consensus_len; i++){
-    if(v >= VERBOSE_BASIC) Rprintf("Iteration %d of %d:\n", i+1, consensus_len);
-
-    // modify weights according to sigmoid transformation
-    if(v >= VERBOSE_BASIC) Rprintf("\tTransforming edge weights...\n");
-    copy_weightsfile_sig(transformedweights, weightsfile, num_edges, consensus_weights[i]);
-
-    // reset cluster values
-    reset_trie_clusters(num_v);
-
-    // cluster with transformed weights
-    cluster_file(transformedweights, neighborfile,
-                  num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
-
-    if(v >= VERBOSE_BASIC) Rprintf("\tRecording results...\n");
-    for(l_uint i=0; i<num_v; i++){
-      tmpleaf = GLOBAL_all_leaves[i];
-      clusters[tmpleaf->index] = tmpleaf->count;
-    }
-
-    // this should be fine assuming 64-bit system
-    // R isn't supported on 32-bit machines, so we know it'll be large enough
-    safe_fwrite(clusters, L_SIZE, num_v, dummyclust);
-  }
-  fclose_tracked(1);
-  free(clusters);
-
-  // now we can just destroy the other files
-  if(v >= VERBOSE_BASIC) Rprintf("Reconciling runs...\n");
-  resolve_cluster_consensus(tmpclusterfile, weightsfile, neighborfile,
-                            num_v, consensus_len);
-
-  if(v >= VERBOSE_BASIC) Rprintf("Clustering on consensus data...\n");
-  reset_trie_clusters(num_v);
-  cluster_file(weightsfile, neighborfile, num_v, num_iter, v, self_loop_weight, atten_pow, dist_pow);
-
-  return;
-}
-
-static l_uint write_output_clusters_trie(FILE *outfile, prefix *trie, l_uint *clust_mapping,
+static l_uint write_output_clusters_trie(file_t *outfile, prefix *trie, l_uint *clust_mapping,
                                 char *s, int cur_pos, char *write_buf, const size_t num_bytes,
                                 const char *seps, l_uint num_v, int verbose){
   // traverse the tree to rebuild node names
@@ -1750,8 +1549,8 @@ static SEXP find_disjoint_sets(l_uint num_v, const double cutoff,
                               const char* edges_file, const char* weights_file){
   l_uint* sets = safe_malloc(sizeof(l_uint) * num_v);
   l_uint* sizes = safe_malloc(sizeof(l_uint) * num_v);
-  FILE *efile = safe_fopen(edges_file, "rb");
-  FILE *wfile = safe_fopen(weights_file, "rb");
+  file_t *efile = fopen_tracked(edges_file, "rb", UNCOMPRESSED);
+  file_t *wfile = fopen_tracked(weights_file, "rb", UNCOMPRESSED);
 
   for(l_uint i = 0; i < num_v; i++){
     sets[i] = i;
@@ -1770,8 +1569,8 @@ static SEXP find_disjoint_sets(l_uint num_v, const double cutoff,
       weights = safe_realloc(weights, nedges*W_SIZE);
       buf_size = nedges;
     }
-    fseek(efile, start*L_SIZE, SEEK_SET);
-    fseek(wfile, start*W_SIZE, SEEK_SET);
+    safe_fseek(efile, start*L_SIZE, SEEK_SET);
+    safe_fseek(wfile, start*W_SIZE, SEEK_SET);
     safe_fread(indices, L_SIZE, nedges, efile);
     safe_fread(weights, W_SIZE, nedges, wfile);
     for(l_uint j=0; j<nedges; j++)
@@ -1803,7 +1602,7 @@ static SEXP find_disjoint_sets(l_uint num_v, const double cutoff,
 }
 
 static SEXP validate_read_weights(const char* neighbor, l_uint expected_edges, int is_undirected){
-  FILE *f = safe_fopen(neighbor, "rb");
+  file_t *f = fopen_tracked(neighbor, "rb", UNCOMPRESSED);
   SEXP all_w = PROTECT(allocVector(REALSXP, expected_edges));
   double* result = REAL(all_w);
   edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE));
@@ -1812,7 +1611,7 @@ static SEXP validate_read_weights(const char* neighbor, l_uint expected_edges, i
   l_uint nread = FILE_READ_CACHE_SIZE;
   l_uint total_read = 0;
   while(nread == FILE_READ_CACHE_SIZE){
-    nread = fread(buf, sizeof(edge), FILE_READ_CACHE_SIZE, f);
+    nread = unsafe_fread(buf, sizeof(edge), FILE_READ_CACHE_SIZE, f);
     for(int i=0; i<nread; i++){
       decompressEdgeValue(buf[i].w, &v, &w);
       result[total_read++] = w;
@@ -1837,7 +1636,7 @@ static SEXP validate_node_degree(l_uint num_v){
 
 static void validate_edgefile_is_sorted(const char* neighbor, const l_uint expected_edges){
   // this function validates file contents after edges are sorted but before split
-  FILE *f = safe_fopen(neighbor, "rb");
+  file_t *f = fopen_tracked(neighbor, "rb", UNCOMPRESSED);
   edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE+1));
   buf[0].v = 0;
 
@@ -1846,7 +1645,7 @@ static void validate_edgefile_is_sorted(const char* neighbor, const l_uint expec
   while(nread == FILE_READ_CACHE_SIZE){
     if(total_read > 0)
       buf[0].v = buf[FILE_READ_CACHE_SIZE].v;
-    nread = fread(buf+1, sizeof(edge), FILE_READ_CACHE_SIZE, f);
+    nread = unsafe_fread(buf+1, sizeof(edge), FILE_READ_CACHE_SIZE, f);
     for(int i=1; i<=nread; i++){
       if(buf[i].v < buf[i-1].v) error("Edgefile is improperly sorted!\n");
     }
@@ -1866,9 +1665,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILES,  // more files
                     SEXP SEPS, SEXP ITER, SEXP VERBOSE, // control flow
                     SEXP IS_UNDIRECTED, SEXP ADD_SELF_LOOPS, // optional adjustments
-                    SEXP IGNORE_WEIGHTS, SEXP CONSENSUS_WEIGHTS,
-                    SEXP SORT_INPLACE, SEXP ATTEN_POWER, SEXP DIST_POWER,
-                    SEXP TESTING){
+                    SEXP IGNORE_WEIGHTS, SEXP SORT_INPLACE,
+                    SEXP ATTEN_POWER, SEXP SKIP_HLINES, SEXP TESTING){
   /*
    * I always forget how to handle R strings so I'm going to record it here
    * R character vectors are STRSXPs, which is the same as a list (VECSXP)
@@ -1886,7 +1684,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   // initialize global variables
   GLOBAL_nfiles = 0;
   GLOBAL_filenames = safe_malloc(sizeof(char*) * 10);
-  GLOBAL_ftracker = safe_malloc(sizeof(FILE*) * 20);
+  GLOBAL_ftracker = safe_malloc(sizeof(file_t*) * 20);
   GLOBAL_trie = initialize_trie();
   GLOBAL_all_leaves = NULL;
   GLOBAL_mergebuffers = NULL;
@@ -1917,12 +1715,8 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   const int ignore_weights = LOGICAL(IGNORE_WEIGHTS)[0];
   const int use_inplace_sort = LOGICAL(SORT_INPLACE)[0];
   const double* atten_power = REAL(ATTEN_POWER);
-  const double* dist_power = REAL(DIST_POWER);
+  const int skip_header_lines = INTEGER(SKIP_HLINES)[0];
   const int debug = LOGICAL(TESTING)[0];
-
-  // consensus stuff
-  const int consensus_len = length(CONSENSUS_WEIGHTS);
-  const double* consensus_w = REAL(CONSENSUS_WEIGHTS);
 
   // timing
   time_t time1, time2;
@@ -1930,7 +1724,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   time1 = time(NULL);
   if(verbose >= VERBOSE_BASIC) Rprintf("Reading in edges...\n");
   l_uint num_edges = 0;
-  FILE *neighbortable = safe_fopen(neighborfile, "ab");
+  file_t *neighbortable = fopen_tracked(neighborfile, "ab", UNCOMPRESSED);
   GLOBAL_readedges = safe_malloc(FILE_READ_CACHE_SIZE * sizeof(edge));
   GLOBAL_cachectr = 0;
   for(int i=0; i<num_edgefiles; i++){
@@ -1941,6 +1735,7 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                                               &num_v, verbose,
                                               is_undirected,
                                               ignore_weights,
+                                              skip_header_lines,
                                               i == num_edgefiles-1);
   }
   fclose_tracked(1);
@@ -2050,22 +1845,14 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
     // this could cause issues if there's a loss in precision in weights
     w_float new_slw;
     decompressEdgeValue(compressEdgeValues(0,0,self_loop_weights[i]).w, NULL, &new_slw);
-    if(consensus_len){
-      consensus_cluster_oom(weightsfile, neighborfile, dir, num_v,
-                            num_iter[i], verbose, new_slw,
-                            atten_power[i], dist_power[i],
-                            consensus_w, consensus_len);
-
-    } else {
-      cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
-                    new_slw, atten_power[i], dist_power[i]);
-    }
+    cluster_file(weightsfile, neighborfile, num_v, num_iter[i], verbose,
+                    new_slw, atten_power[i]);
     time2 = time(NULL);
     if(verbose >= VERBOSE_BASIC) report_time(time1, time2, "\t");
 
     // have to allocate resources for writing out
     outfile = CHAR(STRING_ELT(OUTFILES, i));
-    FILE *results = safe_fopen(outfile, "wb");
+    file_t *results = fopen_tracked(outfile, "wb", UNCOMPRESSED);
     if(!results) error("Failed to open output file.");
     l_uint *clust_mapping = safe_calloc(num_v, L_SIZE);
     CLUST_MAP_CTR = 1;

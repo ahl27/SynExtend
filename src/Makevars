@@ -16,8 +16,9 @@ PKG_C_SOURCES = \
   SEutils.c \
   XORRand.c \
   ExoLabel/ExoLabel.c \
-  ExoLabel/LoserTree.c \
-  ExoLabel/PrefixTrie.c
+  ExoLabel/FileHandlers.c \
+  ExoLabel/PrefixTrie.c \
+  ExoLabel/LoserTree.c
 
 # Fortran source files
 PKG_F_SOURCES = \
