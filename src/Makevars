@@ -7,6 +7,7 @@ PKG_C_SOURCES = \
   CDend.c \
   CShuffle.c \
   dendrapply.c \
+  HitConsensus.c \
   HungarianAlgo.c \
   MoranI.c \
   NucleotideCounts.c \
@@ -16,7 +17,7 @@ PKG_C_SOURCES = \
   XORRand.c \
   ExoLabel/ExoLabel.c \
   ExoLabel/LoserTree.c \
-  ExoLabel/PrefixTrie.c \
+  ExoLabel/PrefixTrie.c
 
 # Fortran source files
 PKG_F_SOURCES = \
