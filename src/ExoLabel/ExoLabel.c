@@ -1545,6 +1545,34 @@ static void merge_dsu_sets(l_uint *reps, l_uint *sizes, int v1, int v2){
   return;
 }
 
+static void validate_edgefile_is_sorted(const char* neighbor, const l_uint expected_edges){
+  // this function validates file contents after edges are sorted but before split
+  file_t *f = fopen_tracked(neighbor, "rb", UNCOMPRESSED);
+  edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE+1));
+  buf[0].v = 0;
+
+  l_uint nread = FILE_READ_CACHE_SIZE;
+  l_uint total_read = 0;
+  while(nread == FILE_READ_CACHE_SIZE){
+    if(total_read > 0)
+      buf[0].v = buf[FILE_READ_CACHE_SIZE].v;
+    nread = unsafe_fread(buf+1, sizeof(edge), FILE_READ_CACHE_SIZE, f);
+    for(int i=1; i<=nread; i++){
+      if(buf[i].v < buf[i-1].v) error("Edgefile is improperly sorted!\n");
+    }
+    total_read += nread;
+  }
+  fclose_tracked(1);
+  free(buf);
+  if(total_read != expected_edges){
+    error("Wrong number of edges! Expected %" lu_fprint ", read %" lu_fprint ".\n",
+      expected_edges, total_read);
+  }
+  return;
+}
+
+#ifdef COMPILING_SYNEXTEND_VIA_R
+/* Definitions specific to R-installations */
 static SEXP find_disjoint_sets(l_uint num_v, const double cutoff,
                               const char* edges_file, const char* weights_file){
   l_uint* sets = safe_malloc(sizeof(l_uint) * num_v);
@@ -1633,33 +1661,6 @@ static SEXP validate_node_degree(l_uint num_v){
   }
   return all_degrees;
 }
-
-static void validate_edgefile_is_sorted(const char* neighbor, const l_uint expected_edges){
-  // this function validates file contents after edges are sorted but before split
-  file_t *f = fopen_tracked(neighbor, "rb", UNCOMPRESSED);
-  edge* buf = safe_malloc(sizeof(edge)*(FILE_READ_CACHE_SIZE+1));
-  buf[0].v = 0;
-
-  l_uint nread = FILE_READ_CACHE_SIZE;
-  l_uint total_read = 0;
-  while(nread == FILE_READ_CACHE_SIZE){
-    if(total_read > 0)
-      buf[0].v = buf[FILE_READ_CACHE_SIZE].v;
-    nread = unsafe_fread(buf+1, sizeof(edge), FILE_READ_CACHE_SIZE, f);
-    for(int i=1; i<=nread; i++){
-      if(buf[i].v < buf[i-1].v) error("Edgefile is improperly sorted!\n");
-    }
-    total_read += nread;
-  }
-  fclose_tracked(1);
-  free(buf);
-  if(total_read != expected_edges){
-    error("Wrong number of edges! Expected %" lu_fprint ", read %" lu_fprint ".\n",
-      expected_edges, total_read);
-  }
-  return;
-}
-
 
 SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
                     SEXP OUTDIR, SEXP OUTFILES,  // more files
@@ -1887,3 +1888,4 @@ SEXP R_LPOOM_cluster(SEXP FILENAME, SEXP NUM_EFILES, // files
   UNPROTECT(1);
   return RETURN_VAL;
 }
+#endif
