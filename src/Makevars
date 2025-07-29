@@ -9,7 +9,6 @@ PKG_C_SOURCES = \
   dendrapply.c \
   HitConsensus.c \
   HungarianAlgo.c \
-  HitConsensus.c \
   MoranI.c \
   NucleotideCounts.c \
   R_init_synextend.c \
