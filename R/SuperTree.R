@@ -87,7 +87,7 @@ SuperTree <- function(myDendList, NAMEFUN=NULL, Verbose=TRUE, ...){
   if(Verbose){
     cat("\n\n  Building species tree...\n")
   }
-  newTree <- TreeLine(myDistMatrix=dmat, verbose=Verbose, ...)
+  newTree <- Treeline(myDistMatrix=dmat, verbose=Verbose, ...)
 
   if (Verbose){
     dt <- difftime(start, Sys.time())

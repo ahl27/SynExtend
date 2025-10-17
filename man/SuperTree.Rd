@@ -29,7 +29,7 @@ Logical; Determines if status messages and progress bars should be displayed whi
 }
 
 \item{...}{
-Further arguments passed to \code{\link{TreeLine}}
+Further arguments passed to \code{\link{Treeline}}
 }
 }
 \details{
@@ -60,7 +60,7 @@ Aidan Lakshman \email{ahl27@pitt.edu}
 }
 
 \seealso{
-\code{\link[DECIPHER]{TreeLine}}, \code{\link{SuperTreeEx}}
+\code{\link[DECIPHER]{Treeline}}, \code{\link{SuperTreeEx}}
 }
 \examples{
 # Loads a list of dendrograms
