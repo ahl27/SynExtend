@@ -239,24 +239,24 @@ Standardize_Subset <- function(Subset, ew){
   }
 
   if(!is.data.frame(Subset)){
-    ## by now, Subset must be either a data.frame or a 1D vector
-    ## in the latter case, it must be an integer
-    l <- length(n)
+    ## Subset is a 1D vector, we need to make all combinations of it with itself
+    ## Total number of pairs is a triangular number:
+    ##  l * (l-1) / 2
+    ## i.e., 3 elements -> 3*2 / 2 = 3 pairs
+    n <- names(ew)
     vp <- sort(Subset)
-    l2 <- length(vp)
-    ## first pair has l-1 pairs, second has l-2, etc...
-    ## this equals sum_{i in [1:l2]}(l - i)
-    ## = sum(l) - sum(i)
-    ## = l*l2 - TRI(l2), where TRI(n) the n'th triangular number
-    rep_times <- rep(l, l2) - seq_len(l2)
-    total_pairs <- rep_times
-    v1 <- rep(vp, times=rep_times)
-    v2 <- integer(sum(rep_times))
-    all_v <- seq_len(l)
-    rep_times <- cumsum(c(0,rep_times))
-    for(i in seq_len(l2))
-      v2[seq(rep_times[i]+1, rep_times[i+1])] <- all_v[-vp[seq_len(i)]]
-    Subset <- data.frame(Gene1=n[v1], Gene2=n[v2])
+    l <- length(vp)
+    num_pairs <- l * (l-1) / 2
+    g1 <- g2 <- rep(NA_integer_, num_pairs)
+    ctr <- 1L
+    for(i in seq_len(l-1)){
+      for(j in seq(i+1, l)){
+        g1[ctr] <- i
+        g2[ctr] <- j
+        ctr <- ctr + 1L
+      }
+    }
+    Subset <- data.frame(Gene1=n[g1], Gene2=n[g2])
   } else {
     for(i in seq_len(2)){
       if(is.numeric(Subset[,i])){
@@ -283,7 +283,7 @@ Standardize_Subset <- function(Subset, ew){
         }
       }
     }
-  colnames(Subset) <- c("Gene1", "Gene2")
+    colnames(Subset) <- c("Gene1", "Gene2")
   }
   Subset
 }
