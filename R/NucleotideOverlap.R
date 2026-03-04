@@ -1,6 +1,6 @@
 # Author: Nicholas Cooley
 # Maintainer: Nicholas Cooley
-# Contact: npc19@pitt.edu
+# Contact: Nicholas.Cooley@ul.ie
 
 NucleotideOverlap <- function(SyntenyObject,
                               GeneCalls,
@@ -48,8 +48,11 @@ NucleotideOverlap <- function(SyntenyObject,
   ResultMatrix <- matrix(data = list(),
                          nrow = L,
                          ncol = L)
-  TotalLength <- L^2 - L
-  TotalCounter <- 0L
+  # The formula for the count of the upper and lower triangles minus the diagonal...
+  # TotalLength <- L^2 - L
+  # we're only ticking the pb once per comparison now, used to be twice ...
+  TotalLength <- (L * (L - 1)) / 2
+  TotalCounter <- 1L
   ######
   # scroll through every hit table in the synteny object
   ######
@@ -67,11 +70,14 @@ NucleotideOverlap <- function(SyntenyObject,
                                                   length = length(GeneCalls))
   names(FeatureRepresentations) <- names(GeneCalls)
   
-  GCallClasses <- sapply(GeneCalls,
-                         function(x) class(x),
-                         USE.NAMES = FALSE,
-                         simplify = TRUE)
-  if (any(GCallClasses == "GRanges")) {
+  GRangeCheck <- vapply(X = GeneCalls,
+                        FUN = function(x) {
+                          is(object = x,
+                             class2 = "GRanges")
+                        },
+                        FUN.VALUE = vector(mode = "logical",
+                                           length = 1))
+  if (any(GRangeCheck)) {
     warning("GRanges support is tenuous, exercise caution.")
   }
   IndexMatching <- vector("integer",
@@ -134,7 +140,7 @@ NucleotideOverlap <- function(SyntenyObject,
         ph3[[m3]] <- which(C.Index == ph1[m3])
       }
       for (m3 in seq_along(ph1)) {
-        if (length(ph3) > 0L) {
+        if (length(ph3[[m3]]) > 0L) {
           C.Index <- replace(x = C.Index,
                              list = ph3[[m3]],
                              values = ph2[m3])
@@ -151,14 +157,6 @@ NucleotideOverlap <- function(SyntenyObject,
       StartConversion <- StartConversion[o]
       StopConversion <- StopConversion[o]
       LengthsConversion <- LengthsConversion[o]
-      
-      # FeatureRepresentations[[m1]] <- matrix(data = c(IndexConversion,
-      #                                                 StrandConversion,
-      #                                                 StartConversion,
-      #                                                 StopConversion,
-      #                                                 LengthsConversion),
-      #                                        nrow = length(o),
-      #                                        ncol = 5L)
       
       StrandMax <- rep(unname(SyntenyObject[[m1, m1]]),
                        table(IndexConversion))
@@ -200,6 +198,11 @@ NucleotideOverlap <- function(SyntenyObject,
       names(ContigNames[[m1]]) <- ph$Contig
       rm(list = c("ph"))
       
+      # if this is to work with the sub-features as opposed to the entire feature,
+      # i need to:
+      # slam the IRanges list together,
+      # rep the strand, and indices identifiers to expand to the new length that the need
+      # generate a key 
       CurrentIndices <- as.integer(GeneCalls[[m1]]$Index)
       CurrentStarts <- as.integer(GeneCalls[[m1]]$Start)
       if (AcceptContigNames) {
@@ -238,21 +241,11 @@ NucleotideOverlap <- function(SyntenyObject,
         # CurrentIndices <- CurrentIndices[o]
         GeneCalls[[m1]][, "Index"] <- CurrentIndices
       }
-      # CurrentLengths <- CurrentStops - CurrentStarts + 1L
+      # this will return a single IRanges object
+      ans <- GeneCalls[[m1]][o, ]
       
-      # FeatureRepresentations[[m1]] <- matrix(data = c(CurrentIndices,
-      #                                                 CurrentStrands,
-      #                                                 CurrentStarts,
-      #                                                 CurrentStops,
-      #                                                 CurrentLengths),
-      #                                        nrow = length(o),
-      #                                        ncol = 5L)
-      FeatureRepresentations[[m1]] <- GeneCalls[[m1]][o, ]
-      # rm(list = c("CurrentIndices",
-      #             "CurrentStrands",
-      #             "CurrentStarts",
-      #             "CurrentStops",
-      #             "CurrentLengths"))
+      SubFeatureBlocks <- FrameDownward(genecalls = ans)
+      FeatureRepresentations[[m1]] <- SubFeatureBlocks
       
     } else if (is(GeneCalls[[m1]],
                   "Genes")) {
@@ -374,794 +367,440 @@ NucleotideOverlap <- function(SyntenyObject,
   feature_match <- match(x = rownames(SyntenyObject),
                          table = names(FeatureRepresentations))
   
-  
+  # temp_res <<- FeatureRepresentations
   ###### -- End Gene call stuff -----------------------------------------------
   
   pBar <- txtProgressBar(style = 1L)
   for (m1 in seq_len(L - 1L)) {
     for (m2 in (m1 +1L):L) {
-      ######
-      # Collect Index Start Stop and Strand from current subject and query gene calls
-      # Collect Index Start Stop Strand from hit table
-      ######
-      
-      Q.Index <- FeatureRepresentations[[feature_match[m1]]][, 1L]
-      Q.Start <- FeatureRepresentations[[feature_match[m1]]][, 3L]
-      Q.Stop <- FeatureRepresentations[[feature_match[m1]]][, 4L]
-      QG.Strand <- FeatureRepresentations[[feature_match[m1]]][, 2L]
-      
-      S.Index <- FeatureRepresentations[[feature_match[m2]]][, 1L]
-      S.Start <- FeatureRepresentations[[feature_match[m2]]][, 3L]
-      S.Stop <- FeatureRepresentations[[feature_match[m2]]][, 4L]
-      SG.Strand <- FeatureRepresentations[[feature_match[m2]]][, 2L]
-      
-      # if (AcceptContigNames) {
-      #   Q.Index <- FeatureRepresentations[[m1]][, 1L]
-      #   ph1 <- unname(ContigNames[[m1]])
-      #   ph2 <- match(x = names(ContigNames[[m1]]),
-      #                table = SynNames[[m1]])
-      #   ph3 <- vector(mode = "list",
-      #                 length = length(ph1))
-      #   for (m3 in seq_along(ph1)) {
-      #     ph3[[m3]] <- which(Q.Index == ph1[m3])
-      #   }
-      #   for (m3 in seq_along(ph1)) {
-      #     if (length(ph3) > 0L) {
-      #       Q.Index <- replace(x = Q.Index,
-      #                          list = ph3[[m3]],
-      #                          values = ph2[m3])
-      #     }
-      #   }
-      #   rm(list = c("ph1",
-      #               "ph2",
-      #               "ph3"))
-      #   S.Index <- FeatureRepresentations[[m2]][, 1L]
-      #   ph1 <- unname(ContigNames[[m2]])
-      #   ph2 <- match(x = names(ContigNames[[m2]]),
-      #                table = SynNames[[m2]])
-      #   ph3 <- vector(mode = "list",
-      #                 length = length(ph1))
-      #   for (m3 in seq_along(ph1)) {
-      #     ph3[[m3]] <- which(S.Index == ph1[m3])
-      #   }
-      #   for (m3 in seq_along(ph2)) {
-      #     if (length(ph3[[m3]]) > 0L) {
-      #       S.Index <- replace(x = S.Index,
-      #                          list = ph3[[m3]],
-      #                          values = ph2[m3])
-      #     }
-      #   }
-      #   rm(list = c("ph1",
-      #               "ph2",
-      #               "ph3"))
-      #   o <- order(S.Index,
-      #              S.Start)
-      #   S.Start <- S.Start[o]
-      #   S.Stop <- S.Stop[o]
-      #   SG.Strand <- SG.Strand[o]
-      #   S.Index <- S.Index[o]
-      #   o <- order(Q.Index,
-      #              Q.Start)
-      #   Q.Start <- Q.Start[o]
-      #   Q.Stop <- Q.Stop[o]
-      #   QG.Strand <- QG.Strand[o]
-      #   Q.Index <- Q.Index[o]
-      #   rm(list = c("o"))
-      # } else {
-      #   Q.Index <- FeatureRepresentations[[m1]][, 1L]
-      #   S.Index <- FeatureRepresentations[[m2]][, 1L]
-      # }
       
       CurrentHitTable <- SyntenyObject[m1, m2, drop = FALSE][[1]]
-      # return(list(unique(CurrentHitTable[, c(1,2)]),
-      #             FeatureRepresentations[[m1]],
-      #             FeatureRepresentations[[m2]],
-      #             LimitIndex,
-      #             diag(ResultMatrix),
-      #             SynNames,
-      #             FeatureRepresentations,
-      #             Q.Index,
-      #             FeatureRepresentations[[m1]][, 1L],
-      #             S.Index,
-      #             FeatureRepresentations[[m2]][, 1L]))
-      if (LimitIndex) {
-        ######
-        # Select current hit table, subset to only single index
-        ######
-        CurrentHitTable <- CurrentHitTable[which(CurrentHitTable[, "index1"] == 1L), ]
-        CurrentHitTable <- CurrentHitTable[which(CurrentHitTable[, "index2"] == 1L), ]
-        CurrentHitTable <- CurrentHitTable[order(CurrentHitTable[,
-                                                                 "start1",
-                                                                 drop = FALSE]),
-                                           ,
-                                           drop = FALSE]
+      # hit table
+      hit_table <- data.frame("idx1" = CurrentHitTable[, "index1"],
+                              "idx2" = CurrentHitTable[, "index2"],
+                              "inv" = CurrentHitTable[, "strand"],
+                              "width" = CurrentHitTable[, "width"],
+                              "doc1_l" = CurrentHitTable[, "start1"],
+                              "doc1_r" = CurrentHitTable[, "start1"] + CurrentHitTable[, "width"] - 1L,
+                              "doc2_l" = rep(-1L,
+                                             nrow(CurrentHitTable)),
+                              "doc2_r" = rep(-1L,
+                                             nrow(CurrentHitTable)))
+      inv_w <- hit_table$inv == 0
+      hit_table$doc2_l[inv_w] <- CurrentHitTable[inv_w, "start2"]
+      hit_table$doc2_r[inv_w] <- CurrentHitTable[inv_w, "start2"] + CurrentHitTable[inv_w, "width"] - 1L
+      hit_table$doc2_l[!inv_w] <- CurrentHitTable[!inv_w, "start2"] - CurrentHitTable[!inv_w, "width"] + 1L
+      hit_table$doc2_r[!inv_w] <- CurrentHitTable[!inv_w, "start2"]
+      # genecalls in query
+      d1_genecalls_source <- FeatureRepresentations[[feature_match[m1]]]
+      d1_genecalls <- split(x = d1_genecalls_source,
+                            f = d1_genecalls_source$Index)
+      d1_ranges <- lapply(X = d1_genecalls,
+                          FUN = function(x) {
+                            IRanges(start = x$Left,
+                                    end = x$Right)
+                          })
+      # genecalls in subject
+      d2_genecalls_source <- FeatureRepresentations[[feature_match[m2]]]
+      d2_genecalls <- split(x = d2_genecalls_source,
+                            f = d2_genecalls_source$Index)
+      d2_ranges <- lapply(X = d2_genecalls,
+                          FUN = function(x) {
+                            IRanges(start = x$Left,
+                                    end = x$Right)
+                          })
+      # list names should correspond to the indices of the matched orders of 
+      # the contigs
+      
+      doc1_ranges <- IRanges(start = hit_table$doc1_l,
+                             end = hit_table$doc1_r)
+      # split by the index1 value from the synteny object
+      doc1_ranges <- split(x = doc1_ranges,
+                           f = hit_table$idx1)
+      # also split the hit data
+      index_splits <- split(x = hit_table,
+                            f = hit_table$idx1)
+      sub_tbl <- vector(mode = "list",
+                        length = length(doc1_ranges))
+      
+      for (d3 in seq_along(doc1_ranges)) {
+        # using names here should be fine, because it should be forced to link
+        # correctly to the contig names
+        # ctg_w <- which(d1_genecalls$Index == as.integer(names(doc1_ranges)[d3]))
+        curr_d1_genecalls <- d1_genecalls[[names(d1_genecalls) == names(doc1_ranges)[d3]]]
+        curr_d1_ranges <- d1_ranges[[names(d1_ranges) == names(doc1_ranges)[d3]]]
+        curr_hit_tbl <- index_splits[[names(index_splits) == names(doc1_ranges)[d3]]]
+        ph1 <- findOverlaps(query = doc1_ranges[[d3]],
+                            subject = curr_d1_ranges)
+        if (length(ph1) < 1) {
+          next
+        }
+        ph2 <- overlapsRanges(query = doc1_ranges[[d3]],
+                              subject = curr_d1_ranges,
+                              hits = ph1)
+        curr_from <- from(ph1)
+        curr_to <- to(ph1)
+        # find the range adjustment
+        # ctg_w is an integer, and shouldn't be abnormal as long as the overhead
+        # checking has done its job
+        # FOR data.frames: the rownames are split as well, so we can reliably
+        # access them for sorting, ordering or chaining back to the original object if we need
+        # THIS IS NOT THE CASE FOR DataFrames
+        adj_vals <- data.frame("l" = start(ph2) - start(doc1_ranges[[d3]][curr_from]),
+                               "r" = end(doc1_ranges[[d3]][curr_from]) - end(ph2),
+                               "hit_idx" = as.integer(rownames(curr_hit_tbl)[curr_from]),
+                               "feature" = as.integer(rownames(curr_d1_genecalls)[curr_to]))
+        adj_tbl <- data.frame("idx1" = curr_hit_tbl$idx1[curr_from],
+                              "idx2" = curr_hit_tbl$idx2[curr_from],
+                              "inv" = curr_hit_tbl$inv[curr_from],
+                              "width" = width(ph2),
+                              "doc1_l" = curr_hit_tbl$doc1_l[curr_from] + adj_vals$l,
+                              "doc1_r" = curr_hit_tbl$doc1_r[curr_from] - adj_vals$r,
+                              "doc2_l" = rep(x = -1,
+                                             times = nrow(adj_vals)),
+                              "doc2_r" = rep(x = -1,
+                                             times = nrow(adj_vals)),
+                              "source_hit" = adj_vals$hit_idx,
+                              "range1_hit" = adj_vals$feature)
+        # forward-forward search space vs forward-reverse search space
+        
+        adj_tbl$doc2_l[adj_tbl$inv == 0] <- curr_hit_tbl$doc2_l[curr_from][adj_tbl$inv == 0] + adj_vals$l[adj_tbl$inv == 0]
+        adj_tbl$doc2_l[adj_tbl$inv != 0] <- curr_hit_tbl$doc2_l[curr_from][adj_tbl$inv != 0] + adj_vals$r[adj_tbl$inv != 0]
+        adj_tbl$doc2_r[adj_tbl$inv == 0] <- curr_hit_tbl$doc2_r[curr_from][adj_tbl$inv == 0] - adj_vals$r[adj_tbl$inv == 0]
+        adj_tbl$doc2_r[adj_tbl$inv != 0] <- curr_hit_tbl$doc2_r[curr_from][adj_tbl$inv != 0] - adj_vals$l[adj_tbl$inv != 0]
+        
+        sub_tbl[[d3]] <- adj_tbl
+        # return(list(hit_table,
+        #             doc1_ranges,
+        #             d1_genecalls,
+        #             d2_genecalls,
+        #             ph1,
+        #             ph2,
+        #             adj_tbl))
+        
+      }
+      # drop NULL positions
+      # do.call sets its behavior based on either the class or typeof
+      # the first element, if it is NULL, that's a problem for you
+      check_this <- vapply(X = sub_tbl,
+                           FUN = function(x) {
+                             is.null(x)
+                           },
+                           FUN.VALUE = vector(mode = "logical",
+                                              length = 1L))
+      sub_tbl <- sub_tbl[!check_this]
+      # if there's only 1 tbl left, that's it,
+      # if there are none, fill out a dummy table to move forward with
+      # if there are many, slam them together
+      if (length(sub_tbl) == 1) {
+        hit_table <- sub_tbl[[1]]
+      } else if (length(sub_tbl) > 1) {
+        hit_table <- do.call(rbind,
+                             sub_tbl)
+        # need to reorder this
+        # hits that have the same left bound will be ordered from shortest
+        # to longest
+        o_hits <- order(hit_table$idx1,
+                        hit_table$idx2,
+                        hit_table$doc1_l,
+                        hit_table$doc1_r,
+                        hit_table$doc2_l,
+                        hit_table$doc2_r,
+                        decreasing = FALSE)
+        hit_table <- hit_table[o_hits,]
+        rownames(hit_table) <- NULL
       } else {
-        ######
-        # If not limiting by index, order hit table by the index1 first, then the query starts
-        ######
-        CurrentHitTable <- CurrentHitTable[order(CurrentHitTable[,
-                                                                 "index1",
-                                                                 drop = FALSE],
-                                                 CurrentHitTable[,
-                                                                 "start1",
-                                                                 drop = FALSE]),
-                                           ,
-                                           drop = FALSE]
+        # create dummy table
+        hit_table <- data.frame("idx1" = integer(),
+                                "idx2" = integer(),
+                                "inv" = integer(),
+                                "width" = integer(),
+                                "doc1_l" = integer(),
+                                "doc1_r" = integer(),
+                                "doc2_l" = integer(),
+                                "doc2_r" = integer(),
+                                "source_hit" = integer(),
+                                "range1_hit" = integer())
       }
-      ######
-      # Collect the starts and stops for all hits correct for strandedness
-      # Collect indices as well
-      ######
-      HitWidths <- CurrentHitTable[, "width"]
-      Q.HitStarts <- CurrentHitTable[, "start1"]
-      S.HitStarts <- CurrentHitTable[, "start2"]
-      Q.HitEnds <- Q.HitStarts + HitWidths - 1L
-      S.HitEnds <- S.HitStarts + HitWidths - 1L
-      Strand <- CurrentHitTable[, "strand"]
-      QHI <- CurrentHitTable[, "index1"]
-      SHI <- CurrentHitTable[, "index2"]
-      for (i in seq_along(HitWidths)) {
-        if (Strand[i] == 0L) {
-          S.HitStarts[i] <- CurrentHitTable[i, "start2"]
-          S.HitEnds[i] <- CurrentHitTable[i, "start2"] + CurrentHitTable[i, "width"] - 1L
-        } else if (Strand[i] == 1L) {
-          S.HitStarts[i] <- CurrentHitTable[i, "start2"] - CurrentHitTable[i, "width"] + 1L
-          S.HitEnds[i] <- CurrentHitTable[i, "start2"]
-        }
-      }
-      ######
-      # Record a query matrix for every hit that lands inside a gene in our query geneset/genome
-      # contains:
-      # the gene index and hit index in question
-      # modifies the hit boundaries IN THE SUBJECT
-      # records the distances between the hit boundaries and the gene boundaries
-      # the strand for the gene in the query that is being recorded
-      ######
-      QueryMatrix <- matrix(NA_integer_,
-                            nrow = 8L,
-                            ncol = nrow(CurrentHitTable))
-      # return(list(CurrentHitTable,
-      #             FeatureRepresentations,
-      #             Q.Index,
-      #             S.Index))
-      HitCounter <- 1L
-      AddCounter <- 1L
-      DimLimit <- nrow(CurrentHitTable) / 2
-      DimAdjust <- 2L
+      # at this point using the range overlap functions feels logically obtuse
+      # and it should be simpler to scroll through this object than previous
+      # iterations, and hopefully i'm less of a dumbass than i was when i wrote
+      # the original versions of this function
       
-      # return(list(Q.Start,
-      #             Q.Stop,
-      #             QG.Strand,
-      #             Q.Index,
-      #             S.Start,
-      #             S.Stop,
-      #             SG.Strand,
-      #             S.Index,
-      #             SHI))
-      
-      for (z1 in seq_along(Q.Start)) {
-        ######
-        # loop through the starts of the query genes as they have been ordered
-        ######
-        CurrentGene <- HitCounter
-        Q.NucOverLapL <- NA_integer_
-        Q.NucOverLapR <- NA_integer_
-        S.NucPositionL <- NA_integer_
-        S.NucPositionR <- NA_integer_
-        S.Strand <- NA_integer_
+      if (nrow(hit_table) >= 1) {
+        # set the hits table for the upper triangle
+        # try to create the pairs table
         
-        ######
-        # re-register the hit search if a new gene has a start position that
-        # occurs before the end of the previous gene
-        # re-registers can only occur when
-        ######
-        if (z1 > 1L &
-            HitCounter > 1L &
-            HitCounter <= length(HitWidths)) {
-          # not the first gene
-          # not the first hit
-          if (Q.Start[z1] < Q.Stop[z1 - 1L]) {
-            # start of the current gene occurs before end of previous gene
-            # print(paste(QHI[HitCounter],
-            #             Q.Index[z1],
-            #             HitCounter,
-            #             z1))
-            if (QHI[HitCounter] == Q.Index[z1] &
-                Q.Index[z1] == Q.Index[z1 - 1L]) {
-              # gene and hit are in the same index
-              # gene and previous gene are in the same index
-              AvailableReRegisters <- QHI == Q.Index[z1] & Q.HitStarts < Q.Start[z1]
-              if (sum(AvailableReRegisters) > 0L) {
-                # more than zero re-register positions available
-                TempHit <- max(which(AvailableReRegisters))
-                if (TempHit < HitCounter) {
-                  HitCounter <- TempHit
-                }
-              } # else do nothing, no hits that start before the current start and occupy the correct index
-            } # else do nothing - indices are not matched
-          } # else do nothing - start of current gene is after stop of previous
-        } # else do nothing - either first gene or hit
-        
-        while (HitCounter <= length(HitWidths)) {
-          ######
-          # interrogation loop, depending upon where the current hit is
-          # and where the current gene is
-          # either go to the next hit (HitCounter + 1L)
-          # or
-          # go to the next gene (break)
-          # AddCounter tells the loop which row to add information to in
-          # the initialized QueryMatrix, when there is information to add
-          ######
+        # at this point, hits are framed into the space of the doc1 genecalls
+        # meaning that they could have been:
+        # truncated
+        # split apart and truncated
+        # or left intact
+        # because they've been split apart, I don't need to re-register the query ever
+        # but i do need to reregister the subject search
+        subject_search <- split(x = hit_table,
+                                f = list(hit_table$idx1,
+                                         hit_table$idx2),
+                                drop = TRUE)
+        # return(subject_search)
+        prev_idx1 <- 0L
+        prev_idx2 <- 0L
+        modified_subject <- vector(mode = "list",
+                                   length = length(subject_search))
+        for (d3 in seq_along(subject_search)) {
+          # overhead setting
+          curr_idx_1 <- subject_search[[d3]]$idx1[1]
+          curr_idx_2 <- subject_search[[d3]]$idx2[1]
+          curr_subject <- subject_search[[d3]]
+          # do i need this?
+          # if (curr_idx_1 != prev_idx1) {
+          #   
+          # }
+          if (curr_idx_2 != prev_idx2) {
+            d2_w <- which(as.integer(names(d2_genecalls)) == curr_idx_2)
+            curr_d2_genecalls <- d2_genecalls[[d2_w]]
+            curr_d2_ranges <- d2_ranges[[d2_w]]
+          }
+          curr_focal_ranges <- IRanges(start = curr_subject$doc2_l,
+                                       end = curr_subject$doc2_r)
+          ph1 <- findOverlaps(query = curr_focal_ranges,
+                              subject = curr_d2_ranges)
+          if (length(ph1) < 1) {
+            next
+          }
+          ph2 <- overlapsRanges(query = curr_focal_ranges,
+                                subject = curr_d2_ranges,
+                                hits = ph1)
+          curr_from <- from(ph1)
+          curr_to <- to(ph1)
+          # hit idx and features are no long row based here, they need to be based
+          # on the the pass through from the query search
+          adj_vals <- data.frame("l" = start(ph2) - start(curr_focal_ranges[curr_from]),
+                                 "r" = end(curr_focal_ranges[curr_from]) - end(ph2),
+                                 "hit_idx" = curr_subject$source_hit[curr_from],
+                                 "d1_feature" = curr_subject$range1_hit[curr_from])
+          # adjustments here are framed forward forward in the doc2 space 
+          # if inv == 1, then
+          # in the doc1 space they get flipped (i think?)
+          adj_tbl <- data.frame("idx1" = curr_subject$idx1[curr_from],
+                                "idx2" = curr_subject$idx2[curr_from],
+                                "inv" = curr_subject$inv[curr_from],
+                                "width" = width(ph2),
+                                "doc1_l" = rep(-1,
+                                               length(curr_from)),
+                                "doc1_r" = rep(-1,
+                                               length(curr_from)),
+                                "doc2_l" = curr_subject$doc2_l[curr_from] + adj_vals$l,
+                                "doc2_r" = curr_subject$doc2_r[curr_from] - adj_vals$r,
+                                "source_hit" = adj_vals$hit_idx,
+                                "d1_hit" = adj_vals$d1_feature,
+                                "d2_hit" = as.integer(rownames(curr_d2_genecalls)[curr_to]))
+          inv_log1 <- adj_tbl$inv == 0
+          inv_log2 <- adj_tbl$inv != 0
+          adj_tbl$doc1_l[inv_log1] <- curr_subject$doc1_l[curr_from][inv_log1] + adj_vals$l[inv_log1]
+          adj_tbl$doc1_l[inv_log2] <- curr_subject$doc1_l[curr_from][inv_log2] + adj_vals$r[inv_log2]
+          adj_tbl$doc1_r[inv_log1] <- curr_subject$doc1_r[curr_from][inv_log1] - adj_vals$r[inv_log1]
+          adj_tbl$doc1_r[inv_log2] <- curr_subject$doc1_r[curr_from][inv_log2] - adj_vals$l[inv_log2]
           
-          if (Q.HitEnds[HitCounter] < Q.Start[z1] &
-              QHI[HitCounter] == Q.Index[z1]) {
-            # Hit ends before current query gene begins
-            # AND the indices are the same
-            # record the hit counter every time you iterate to the next hit
-            HitCounter <- HitCounter + 1L
-          } else if (Q.HitStarts[HitCounter] < Q.Start[z1] &
-                     Q.HitEnds[HitCounter] >= Q.Start[z1] &
-                     Q.HitEnds[HitCounter] <= Q.Stop[z1] &
-                     QHI[HitCounter] == Q.Index[z1]) {
-            # Hit overlaps left bound of current query gene
-            # Stay on the current gene
-            # And go to the next hit
-            CurrentGene <- z1
-            Q.NucOverLapL <- Q.Start[z1]
-            Q.NucOverLapR <- Q.HitEnds[HitCounter]
-            S.Strand <- Strand[HitCounter]
-            NewWidth <- Q.NucOverLapR - Q.NucOverLapL + 1L
-            Current.QHI <- QHI[HitCounter]
-            Current.SHI <- SHI[HitCounter]
-            ######
-            # Trim hit in subject, overlaps that are in the reverse strand require different trims
-            ######
-            if (S.Strand == 0L) {
-              S.NucPositionR <- S.HitEnds[HitCounter]
-              S.NucPositionL <- S.HitEnds[HitCounter] - NewWidth + 1L
-            } else {
-              S.NucPositionL <- S.HitStarts[HitCounter]
-              S.NucPositionR <- S.HitStarts[HitCounter] + NewWidth - 1L
-            }
-            
-            # Add To Vector!
-            QueryMatrix[, AddCounter] <- c(CurrentGene,
-                                           Q.NucOverLapL,
-                                           Q.NucOverLapR,
-                                           S.NucPositionL,
-                                           S.NucPositionR,
-                                           S.Strand,
-                                           Current.QHI,
-                                           Current.SHI)
-            if (AddCounter >= DimLimit) {
-              QueryMatrix <- cbind(QueryMatrix,
-                                   matrix(data = NA_integer_,
-                                          nrow = nrow(QueryMatrix),
-                                          ncol = ncol(QueryMatrix) * DimAdjust))
-              DimLimit <- ncol(QueryMatrix) / 2
-              DimAdjust <- DimAdjust * 2L
-            }
-            # record the add counter every time a new row is added to the query matrix
-            AddCounter <- AddCounter + 1L
-            # record the hit counter every time you iterate to the next hit
-            HitCounter <- HitCounter + 1L
-          } else if (Q.HitStarts[HitCounter] >= Q.Start[z1] &
-                     Q.HitEnds[HitCounter] <= Q.Stop[z1] &
-                     QHI[HitCounter] == Q.Index[z1]) {
-            # Hit occurs entirely within current query gene
-            # Stay on the current gene
-            # And go to the next hit
-            CurrentGene <- z1
-            Q.NucOverLapL <- Q.HitStarts[HitCounter]
-            Q.NucOverLapR <- Q.HitEnds[HitCounter]
-            S.Strand <- Strand[HitCounter]
-            S.NucPositionL <- S.HitStarts[HitCounter]
-            S.NucPositionR <- S.HitEnds[HitCounter]
-            Current.QHI <- QHI[HitCounter]
-            Current.SHI <- SHI[HitCounter]
-            # Add To Vector!
-            QueryMatrix[, AddCounter] <- c(CurrentGene,
-                                           Q.NucOverLapL,
-                                           Q.NucOverLapR,
-                                           S.NucPositionL,
-                                           S.NucPositionR,
-                                           S.Strand,
-                                           Current.QHI,
-                                           Current.SHI)
-            if (AddCounter >= DimLimit) {
-              QueryMatrix <- cbind(QueryMatrix,
-                                   matrix(data = NA_integer_,
-                                          nrow = nrow(QueryMatrix),
-                                          ncol = ncol(QueryMatrix) * DimAdjust))
-              DimLimit <- ncol(QueryMatrix) / 2
-              DimAdjust <- DimAdjust * 2L
-            }
-            # record the add counter every time a new row is added to the query matrix
-            AddCounter <- AddCounter + 1L
-            # record the hit counter every time you iterate to the next hit
-            HitCounter <- HitCounter + 1L
-          } else if (Q.HitStarts[HitCounter] >= Q.Start[z1] &
-                     Q.HitStarts[HitCounter] <= Q.Stop[z1] &
-                     Q.HitEnds[HitCounter] > Q.Stop[z1] &
-                     QHI[HitCounter] == Q.Index[z1]) {
-            # Hit overlaps right bound of current query gene
-            # Stay on the current hit and go to the next gene
-            CurrentGene <- z1
-            Q.NucOverLapL <- Q.HitStarts[HitCounter]
-            Q.NucOverLapR <- Q.Stop[z1]
-            S.Strand <- Strand[HitCounter]
-            NewWidth <- Q.NucOverLapR - Q.NucOverLapL + 1L
-            Current.QHI <- QHI[HitCounter]
-            Current.SHI <- SHI[HitCounter]
-            if (S.Strand == 0L) {
-              S.NucPositionL <- S.HitStarts[HitCounter]
-              S.NucPositionR <- S.HitStarts[HitCounter] + NewWidth - 1L
-            } else {
-              S.NucPositionR <- S.HitEnds[HitCounter]
-              S.NucPositionL <- S.HitEnds[HitCounter] - NewWidth + 1L
-            }
-            # Add To Vector!
-            QueryMatrix[, AddCounter] <- c(CurrentGene,
-                                           Q.NucOverLapL,
-                                           Q.NucOverLapR,
-                                           S.NucPositionL,
-                                           S.NucPositionR,
-                                           S.Strand,
-                                           Current.QHI,
-                                           Current.SHI)
-            if (AddCounter >= DimLimit) {
-              QueryMatrix <- cbind(QueryMatrix,
-                                   matrix(data = NA_integer_,
-                                          nrow = nrow(QueryMatrix),
-                                          ncol = ncol(QueryMatrix) * DimAdjust))
-              DimLimit <- ncol(QueryMatrix) / 2
-              DimAdjust <- DimAdjust * 2L
-            }
-            # record the add counter every time a new row is added to the query matrix
-            AddCounter <- AddCounter + 1L
-            break
-          } else if (Q.HitStarts[HitCounter] < Q.Start[z1] &
-                     Q.HitEnds[HitCounter] > Q.Stop[z1] &
-                     QHI[HitCounter] == Q.Index[z1]) {
-            # Hit eclipses current query gene
-            # Stay on the current hit, and go to the next gene
-            CurrentGene <- z1
-            Q.NucOverLapL <- Q.Start[z1]
-            Q.NucOverLapR <- Q.Stop[z1]
-            TrimLeft <- Q.Start[z1] - Q.HitStarts[HitCounter]
-            TrimRight <- Q.HitEnds[HitCounter] - Q.Stop[z1]
-            S.Strand <- Strand[HitCounter]
-            NewWidth <- Q.NucOverLapR - Q.NucOverLapL + 1L
-            Current.QHI <- QHI[HitCounter]
-            Current.SHI <- SHI[HitCounter]
-            if (S.Strand == 0L) {
-              S.NucPositionL <- S.HitStarts[HitCounter] + TrimLeft
-              S.NucPositionR <- S.NucPositionL + NewWidth - 1L
-            } else {
-              S.NucPositionR <- S.HitEnds[HitCounter] - TrimLeft
-              S.NucPositionL <- S.NucPositionR - NewWidth + 1L
-            }
-            # Add To Vector!
-            QueryMatrix[, AddCounter] <- c(CurrentGene,
-                                           Q.NucOverLapL,
-                                           Q.NucOverLapR,
-                                           S.NucPositionL,
-                                           S.NucPositionR,
-                                           S.Strand,
-                                           Current.QHI,
-                                           Current.SHI)
-            if (AddCounter >= DimLimit) {
-              QueryMatrix <- cbind(QueryMatrix,
-                                   matrix(data = NA_integer_,
-                                          nrow = nrow(QueryMatrix),
-                                          ncol = ncol(QueryMatrix) * DimAdjust))
-              DimLimit <- ncol(QueryMatrix) / 2
-              DimAdjust <- DimAdjust * 2L
-            }
-            # record the add counter every time a new row is added to the query matrix
-            AddCounter <- AddCounter + 1L
-            break
-          } else if (Q.HitStarts[HitCounter] > Q.Stop[z1] &
-                     QHI[HitCounter] == Q.Index[z1]) {
-            # Hit occurs after current query gene
-            # And the indices are matched
-            # Go to next gene
-            break
-          } else if (QHI[HitCounter] > Q.Index[z1]) {
-            # If the index of the hits in the query has outpaced the index of the genes
-            break
-          } else if (QHI[HitCounter] < Q.Index[z1]) {
-            # If the index of the genes has outpaced the index of the hits
-            # record the hit counter every time you iterate to the next hit
-            HitCounter <- HitCounter + 1L
-          } # end of else if conditionals
-        } # end while loop through hits
-      } # end for loop through genes
-      if (Verbose) {
-        TotalCounter <- TotalCounter + 1L
-        setTxtProgressBar(pb = pBar,
-                          value = TotalCounter/TotalLength)
-      }
-      QueryMatrix <- t(QueryMatrix)
-      colnames(QueryMatrix) <- c("CurrentGene", # The gene that was recorded with a hit present
-                                 "QueryNucleotideOverLapLeft", # leftmost nucleotide position of a hit that is within CurrentGene
-                                 "QueryNucleotideOverLapRight", # rightmost nucleotide position of a hit that is within CurrentGene
-                                 "SubjectNucleotidePositionLeft", # corresponding leftmost position in the subject
-                                 "SubjectNucleotidePositionRight", # corresponding rightmost position in the subject
-                                 "SubjectStrand", # strand of the hit in the subject
-                                 "QueryIndex", # index that was matched between the hit and the gene in the query
-                                 "SubjectIndex" # index (chromosome, plasmid, whatever) of the hit in the subject
-                                 )
-      # return(QueryMatrix)
-      ######
-      # Remove unfilled extra rows
-      ######
-      QueryMatrix <- QueryMatrix[apply(QueryMatrix,
-                                       1L,
-                                       function(x) !all(is.na(x))),
-                                 ,
-                                 drop = FALSE]
-      if (dim(QueryMatrix)[1] == 0L) {
-        OutPutMatrix <- matrix(NA_integer_,
-                               nrow = 1L,
-                               ncol = 7L)
-        OverLapMatrix <- matrix(NA_integer_,
-                                nrow = 1L,
-                                ncol = 7L)
+          modified_subject[[d3]] <- adj_tbl
+          
+          prev_idx1 <- curr_idx_1
+          prev_idx2 <- curr_idx_2
+        }
+        # return(modified_subject)
+        check_this <- vapply(X = modified_subject,
+                             FUN = function(x) {
+                               is.null(x)
+                             },
+                             FUN.VALUE = vector(mode = "logical",
+                                                length = 1))
+        modified_subject <- modified_subject[!check_this]
+        
+        # return(modified_subject)
+        # manage our table possibilities
+        # in any case where there is more than 0 rows in the final table, we need
+        # to re-register the genecall ids from the sub-features back to the features
+        if (length(modified_subject) == 1) {
+          final_hit_table <- modified_subject[[1]]
+          rownames(final_hit_table) <- NULL
+        } else if (length(modified_subject) > 1) {
+          final_hit_table <- do.call(rbind,
+                                     modified_subject)
+          rownames(final_hit_table) <- NULL
+        } else {
+          # fill in a dummy table
+          final_hit_table <- data.frame("idx1" = integer(),
+                                        "idx2" = integer(),
+                                        "inv" = integer(),
+                                        "width" = integer(),
+                                        "doc1_l" = integer(),
+                                        "doc1_r" = integer(),
+                                        "doc2_l" = integer(),
+                                        "doc2_r" = integer(),
+                                        "source_hit" = integer(),
+                                        "d1_hit" = integer(),
+                                        "d2_hit" = integer(),
+                                        "d1_subkey" = integer(),
+                                        "d2_subkey" = integer())
+        }
+        
+        # return(final_hit_table)
+        if (nrow(final_hit_table) > 0) {
+          final_hit_table$d1_hit <- d1_genecalls_source$Key[final_hit_table$d1_hit]
+          final_hit_table$d1_subkey <- d1_genecalls_source$SubKey[final_hit_table$d1_hit]
+          final_hit_table$d2_hit <- d2_genecalls_source$Key[final_hit_table$d2_hit]
+          final_hit_table$d2_subkey <- d2_genecalls_source$SubKey[final_hit_table$d2_hit]
+          o_final <- order(final_hit_table$d1_hit,
+                           final_hit_table$d2_hit,
+                           final_hit_table$d1_subkey,
+                           final_hit_table$d2_subkey)
+          final_hit_table <- final_hit_table[o_final, ]
+          
+          # create the feature pairwise table
+          pairwise_table <- split(x = final_hit_table,
+                                  f = list(final_hit_table$d1_hit,
+                                           final_hit_table$d2_hit),
+                                  drop = TRUE)
+          pairwise_table <- lapply(X = pairwise_table,
+                                   FUN = function(x) {
+                                     if (nrow(x) == 1) {
+                                       # res <- data.frame("QueryGene" = x$d1_hit,
+                                       #                   "SubjectGene" = x$d2_hit,
+                                       #                   "ExactOverlap" = x$width,
+                                       #                   "QueryIndex" = x$idx1,
+                                       #                   "SubjectIndex" = x$idx2,
+                                       #                   "QLeftPos" = x$doc1_l,
+                                       #                   "QRightPos" = x$doc1_r,
+                                       #                   "SLeftPos" = x$doc2_l,
+                                       #                   "SRightPos" = x$doc2_r,
+                                       #                   "MaxKmerSize" = x$width,
+                                       #                   "TotalKmerHits" = 1)
+                                       res <- c(x$d1_hit,
+                                                x$d2_hit,
+                                                x$width,
+                                                x$idx1,
+                                                x$idx2,
+                                                x$doc1_l,
+                                                x$doc1_r,
+                                                x$doc2_l,
+                                                x$doc2_r,
+                                                x$width,
+                                                1L)
+                                     } else {
+                                       # res <- data.frame("QueryGene" = x$d1_hit[1],
+                                       #                   "SubjectGene" = x$d2_hit[1],
+                                       #                   "ExactOverlap" = sum(x$width),
+                                       #                   "QueryIndex" = x$idx1[1],
+                                       #                   "SubjectIndex" = x$idx2[1],
+                                       #                   "QLeftPos" = min(x$doc1_l),
+                                       #                   "QRightPos" = max(x$doc1_r),
+                                       #                   "SLeftPos" = min(x$doc2_l[1]),
+                                       #                   "SRightPos" = max(x$doc2_r),
+                                       #                   "MaxKmerSize" = sum(x$width),
+                                       #                   "TotalKmerHits" = nrow(x))
+                                       
+                                       # not yet implemented, but need to figure out how
+                                       # to correctly place bounds that recycle to the 
+                                       # beginning of a contig
+                                       # o_doc1 <- order(x$d1_hit,
+                                       #                 x$d1_subkey)
+                                       # o_doc2 <- order(x$d2_hit,
+                                       #                 x$d2_subkey)
+                                       res <- c(x$d1_hit[1],
+                                                x$d2_hit[1],
+                                                sum(x$width),
+                                                x$idx1[1],
+                                                x$idx2[1],
+                                                min(x$doc1_l),
+                                                max(x$doc1_r),
+                                                min(x$doc2_l[1]),
+                                                max(x$doc2_r),
+                                                sum(x$width),
+                                                nrow(x))
+                                     }
+                                     return(res)
+                                   })
+          pairwise_table <- do.call(rbind,
+                                    pairwise_table)
+          rownames(pairwise_table) <- NULL
+        } else {
+          # create dummy pairs table
+          pairwise_table <- matrix(data = integer(),
+                                   ncol = 10L)
+        } # end if else on the final hit table
+        
+        # there needs to be a hits table for the lower triangle
+        # and a pairs table for the upper triangle
+        
       } else {
-        HitCounter <- 1L
-        AddCounter <- 1L
-        OverLapMatrix <- matrix(NA_integer_,
-                                ncol = nrow(QueryMatrix),
-                                nrow = 9L)
-        QueryMatrix <- QueryMatrix[order(QueryMatrix[,
-                                                     "SubjectIndex",
-                                                     drop = FALSE],
-                                         QueryMatrix[,
-                                                     "SubjectNucleotidePositionLeft",
-                                                     drop = FALSE]),
-                                   ,
-                                   drop = FALSE]
-        DimAdjust <- 2L
-        DimLimit <- ncol(OverLapMatrix) / 2
-        ######
-        # Part 2!
-        # Hits that were recorded as being within a gene in the query
-        # are now tested again the genes in the subject
-        ######
-        QueryMap <- QueryMatrix[, "CurrentGene"]
-        S.HitStarts <- QueryMatrix[, "SubjectNucleotidePositionLeft"]
-        S.HitEnds <- QueryMatrix[, "SubjectNucleotidePositionRight"]
-        Q.HitStarts <- QueryMatrix[, "QueryNucleotideOverLapLeft"]
-        Q.HitEnds <- QueryMatrix[, "QueryNucleotideOverLapRight"]
-        QueryIndices <- QueryMatrix[, "QueryIndex"]
-        SubjectHitIndex <- QueryMatrix[, "SubjectIndex"]
-        
-        # return(list(QueryMatrix,
-        #             S.Start,
-        #             S.Stop,
-        #             S.Index,
-        #             FeatureRepresentations[[m1]],
-        #             FeatureRepresentations[[m2]]))
-        for (z2 in seq_along(S.Start)) {
-          ######
-          # Loop through the subject genes
-          ######
-          while (HitCounter <= length(QueryMap)) {
-            if (S.HitEnds[HitCounter] < S.Start[z2] &
-                SubjectHitIndex[HitCounter] == S.Index[z2]) {
-              # Hit ends before current subject gene begins
-              HitCounter <- HitCounter + 1L
-            } else if (S.HitStarts[HitCounter] < S.Start[z2] &
-                       S.HitEnds[HitCounter] >= S.Start[z2] &
-                       S.HitEnds[HitCounter] <= S.Stop[z2] &
-                       SubjectHitIndex[HitCounter] == S.Index[z2]) {
-              # Hit overlaps left bound of current subject gene
-              CurrentGene <- z2
-              QueryGenePosition <- QueryMap[HitCounter]
-              CurrentQueryIndex <- QueryIndices[HitCounter]
-              CurrentSubjectIndex <- SubjectHitIndex[HitCounter]
-              TrimLeft <- S.Start[z2] - S.HitStarts[HitCounter]
-              ExactOverLap <- S.HitEnds[HitCounter] - S.Start[z2] + 1L
-              SubjectHitLeft <- S.HitStarts[HitCounter] + TrimLeft
-              SubjectHitRight <- S.HitEnds[HitCounter]
-              QueryHitLeft <- Q.HitStarts[HitCounter] + TrimLeft
-              QueryHitRight <- Q.HitEnds[HitCounter]
-              # Add to vector !
-              OverLapMatrix[, AddCounter] <- c(QueryGenePosition,
-                                               CurrentGene,
-                                               ExactOverLap,
-                                               CurrentQueryIndex,
-                                               CurrentSubjectIndex,
-                                               QueryHitLeft,
-                                               QueryHitRight,
-                                               SubjectHitLeft,
-                                               SubjectHitRight)
-              if (AddCounter >= DimLimit) {
-                OverLapMatrix <- cbind(OverLapMatrix,
-                                       matrix(data = NA_integer_,
-                                              nrow = nrow(OverLapMatrix),
-                                              ncol = ncol(OverLapMatrix) * DimAdjust))
-                DimLimit <- ncol(OverLapMatrix) / 2
-                DimAdjust <- DimAdjust * 2L
-              }
-              AddCounter <- AddCounter + 1L
-              HitCounter <- HitCounter + 1L
-            } else if (S.HitStarts[HitCounter] >= S.Start[z2] &
-                       S.HitEnds[HitCounter] <= S.Stop[z2] &
-                       SubjectHitIndex[HitCounter] == S.Index[z2]) {
-              # Hit occurs entirely within current subject gene
-              CurrentGene <- z2
-              QueryGenePosition <- QueryMap[HitCounter]
-              ExactOverLap <- S.HitEnds[HitCounter] - S.HitStarts[HitCounter] + 1L
-              CurrentQueryIndex <- QueryIndices[HitCounter]
-              CurrentSubjectIndex <- SubjectHitIndex[HitCounter]
-              SubjectHitLeft <- S.HitStarts[HitCounter]
-              SubjectHitRight <- S.HitEnds[HitCounter]
-              QueryHitLeft <- Q.HitStarts[HitCounter]
-              QueryHitRight <- Q.HitEnds[HitCounter]
-              # Add to vector !
-              OverLapMatrix[, AddCounter] <- c(QueryGenePosition,
-                                               CurrentGene,
-                                               ExactOverLap,
-                                               CurrentQueryIndex,
-                                               CurrentSubjectIndex,
-                                               QueryHitLeft,
-                                               QueryHitRight,
-                                               SubjectHitLeft,
-                                               SubjectHitRight)
-              if (AddCounter >= DimLimit) {
-                OverLapMatrix <- cbind(OverLapMatrix,
-                                       matrix(data = NA_integer_,
-                                              nrow = nrow(OverLapMatrix),
-                                              ncol = ncol(OverLapMatrix) * DimAdjust))
-                DimLimit <- ncol(OverLapMatrix) / 2
-                DimAdjust <- DimAdjust * 2L
-              }
-              AddCounter <- AddCounter + 1L
-              HitCounter <- HitCounter + 1L
-            } else if (S.HitStarts[HitCounter] >= S.Start[z2] &
-                       S.HitStarts[HitCounter] <= S.Stop[z2] &
-                       S.HitEnds[HitCounter] > S.Stop[z2] &
-                       SubjectHitIndex[HitCounter] == S.Index[z2]) {
-              # Hit overlaps right bound of current subject gene
-              # Stay on the current hit and go to the next gene
-              CurrentGene <- z2
-              QueryGenePosition <- QueryMap[HitCounter]
-              ExactOverLap <- S.Stop[z2] - S.HitStarts[HitCounter] + 1L
-              CurrentQueryIndex <- QueryIndices[HitCounter]
-              CurrentSubjectIndex <- SubjectHitIndex[HitCounter]
-              TrimRight <- S.HitEnds[HitCounter] - S.Stop[z2]
-              SubjectHitLeft <- S.HitStarts[HitCounter]
-              SubjectHitRight <- S.HitEnds[HitCounter] - TrimRight
-              QueryHitLeft <- Q.HitStarts[HitCounter]
-              QueryHitRight <- Q.HitEnds[HitCounter] - TrimRight
-              # Add to vector !
-              OverLapMatrix[, AddCounter] <- c(QueryGenePosition,
-                                               CurrentGene,
-                                               ExactOverLap,
-                                               CurrentQueryIndex,
-                                               CurrentSubjectIndex,
-                                               QueryHitLeft,
-                                               QueryHitRight,
-                                               SubjectHitLeft,
-                                               SubjectHitRight)
-              if (AddCounter >= DimLimit) {
-                OverLapMatrix <- cbind(OverLapMatrix,
-                                       matrix(data = NA_integer_,
-                                              nrow = nrow(OverLapMatrix),
-                                              ncol = ncol(OverLapMatrix) * DimAdjust))
-                DimLimit <- ncol(OverLapMatrix) / 2
-                DimAdjust <- DimAdjust * 2L
-              }
-              AddCounter <- AddCounter + 1L
-              break
-            } else if (S.HitStarts[HitCounter] <= S.Start[z2] &
-                       S.HitEnds[HitCounter] >= S.Stop[z2] &
-                       SubjectHitIndex[HitCounter] == S.Index[z2]) {
-              # Hit eclipses current subject gene
-              CurrentGene <- z2
-              QueryGenePosition <- QueryMap[HitCounter]
-              ExactOverLap <- S.Stop[z2] - S.Start[z2] + 1L
-              CurrentQueryIndex <- QueryIndices[HitCounter]
-              CurrentSubjectIndex <- SubjectHitIndex[HitCounter]
-              TrimLeft <- S.Start[z2] - S.HitStarts[HitCounter]
-              TrimRight <- S.HitEnds[HitCounter] - S.Stop[z2]
-              SubjectHitLeft <- S.HitStarts[HitCounter] + TrimLeft
-              SubjectHitRight <- S.HitEnds[HitCounter] - TrimRight
-              QueryHitLeft <- Q.HitStarts[HitCounter] + TrimLeft
-              QueryHitRight <- Q.HitEnds[HitCounter] - TrimRight
-              # Add to vector !
-              OverLapMatrix[, AddCounter] <- c(QueryGenePosition,
-                                               CurrentGene,
-                                               ExactOverLap,
-                                               CurrentQueryIndex,
-                                               CurrentSubjectIndex,
-                                               QueryHitLeft,
-                                               QueryHitRight,
-                                               SubjectHitLeft,
-                                               SubjectHitRight)
-              if (AddCounter >= DimLimit) {
-                OverLapMatrix <- cbind(OverLapMatrix,
-                                       matrix(data = NA_integer_,
-                                              nrow = nrow(OverLapMatrix),
-                                              ncol = ncol(OverLapMatrix) * DimAdjust))
-                DimLimit <- ncol(OverLapMatrix) / 2
-                DimAdjust <- DimAdjust * 2L
-              }
-              AddCounter <- AddCounter + 1L
-              break
-            } else if (S.HitStarts[HitCounter] > S.Stop[z2]) {
-              # Hit occurs after current subject gene
-              break
-            } else if (SubjectHitIndex[HitCounter] < S.Index[z2]) {
-              # The indices do not match the only direction to go is forward
-              HitCounter <- HitCounter + 1L
-            } else if (SubjectHitIndex[HitCounter] > S.Index[z2]) {
-              # if you have outpaced the gene index with the hits go to the next gene
-              break
-            }
-          }
-        }
-      }
+        # create a dummy hits table and a dummy pairs table
+        final_hit_table <- data.frame("idx1" = integer(),
+                                      "idx2" = integer(),
+                                      "inv" = integer(),
+                                      "width" = integer(),
+                                      "doc1_l" = integer(),
+                                      "doc1_r" = integer(),
+                                      "doc2_l" = integer(),
+                                      "doc2_r" = integer(),
+                                      "source_hit" = integer(),
+                                      "d1_hit" = integer(),
+                                      "d2_hit" = integer(),
+                                      "d1_subkey" = integer(),
+                                      "d2_subkey" = integer())
+        pairwise_table <- matrix(data = integer(),
+                                 ncol = 10L)
+      } # end if else on hit table rows
       
-      OverLapMatrix <- t(OverLapMatrix)
-      ######
-      # Remove empty extra rows
-      ######
-      OverLapMatrix <- OverLapMatrix[apply(OverLapMatrix,
-                                           1L,
-                                           function(x) !all(is.na(x))),
-                                     ,
-                                     drop = FALSE]
-      ######
-      # If the overlap matrix is empty, assign an empty single row matrix
-      # If it is not, sum up the overlap in nucleotide space and condense to a single row
-      # Select the smallest distances for all four displacements
-      ######
-      if (dim(OverLapMatrix)[1] == 0L) {
-        OverLapMatrix <- matrix(NA_integer_,
-                                nrow = 1L,
-                                ncol = 9L) # was 11, does this need to be 11 somewhere else?
-        OutPutMatrix <- matrix(NA_integer_,
-                               nrow = 1L,
-                               ncol = 11L)
-      } else if (dim(OverLapMatrix)[1] >= 1L) {
-        OverLapMatrix <- OverLapMatrix[order(OverLapMatrix[, 1L, drop = FALSE],
-                                             OverLapMatrix[, 2L, drop = FALSE],
-                                             OverLapMatrix[, 4L, drop = FALSE],
-                                             OverLapMatrix[, 5L, drop = FALSE]),
-                                       ,
-                                       drop = FALSE]
-        OutPutMatrix <- matrix(NA_integer_,
-                               ncol = 11L,
-                               nrow = nrow(OverLapMatrix))
-        ######
-        # All recordings so far are by hit
-        # condense hits as appropriate, by the genes that they link
-        ######
-        RowCount <- 1L
-        CondenseCount <- 1L
-        Row <- 2L
-        while (CondenseCount <= nrow(OverLapMatrix)) {
-          while (Row <= nrow(OverLapMatrix)) {
-            if (OverLapMatrix[Row, 5L] != OverLapMatrix[CondenseCount, 5L]) {
-              break
-            }
-            if (OverLapMatrix[Row, 4L] != OverLapMatrix[CondenseCount, 4L]) {
-              break
-            }
-            if (OverLapMatrix[Row, 2L] != OverLapMatrix[CondenseCount, 2L]) {
-              break
-            }
-            if (OverLapMatrix[Row, 1L] != OverLapMatrix[CondenseCount, 1L]) {
-              break
-            }
-            Row <- Row + 1L
-          }
-          
-          z5 <- CondenseCount:(Row - 1L)
-          OutPutMatrix[RowCount, ] <- c(OverLapMatrix[CondenseCount, 1L],
-                                        OverLapMatrix[CondenseCount, 2L],
-                                        sum(OverLapMatrix[z5, 3L]),
-                                        OverLapMatrix[CondenseCount, 4L],
-                                        OverLapMatrix[CondenseCount, 5L],
-                                        min(OverLapMatrix[z5, 6L]),
-                                        max(OverLapMatrix[z5, 7L]),
-                                        min(OverLapMatrix[z5, 8L]),
-                                        max(OverLapMatrix[z5, 9L]),
-                                        max(OverLapMatrix[z5, 3L]),
-                                        nrow(OverLapMatrix[z5, , drop = FALSE]))
-          RowCount <- RowCount + 1L
-          CondenseCount <- CondenseCount + length(z5)
-        }
-        OutPutMatrix <- OutPutMatrix[apply(OutPutMatrix,
-                                           1L,
-                                           function(x) !all(is.na(x))),
-                                     ,
-                                     drop = FALSE]
-      }
-      OutPutMatrix <- OutPutMatrix[order(OutPutMatrix[,
-                                                      1L,
-                                                      drop = FALSE]),
-                                   ,
-                                   drop = FALSE]
-      # return(list(OutPutMatrix,
-      #             OverLapMatrix))
-      colnames(OutPutMatrix) <- c("QueryGene",
-                                  "SubjectGene",
-                                  "ExactOverlap",
-                                  "QueryIndex",
-                                  "SubjectIndex",
-                                  "QLeftPos",
-                                  "QRightPos",
-                                  "SLeftPos",
-                                  "SRightPos",
-                                  "MaxKmerSize",
-                                  "TotalKmerHits")
-      colnames(OverLapMatrix) <- c("QueryGene",
-                                   "SubjectGene",
-                                   "ExactOverlap",
-                                   "QueryIndex",
-                                   "SubjectIndex",
-                                   "QLeftPos",
-                                   "QRightPos",
-                                   "SLeftPos",
-                                   "SRightPos")
-      # return(list(OverLapMatrix,
-      #             OutPutMatrix))
-      # QueryStartDisplacement <- ifelse(test = QG.Strand[OutPutMatrix[, "QueryGene"]] == 1L,
-      #                                  yes = abs(OutPutMatrix[, 7L] - Q.Stop[OutPutMatrix[, 1L]]),
-      #                                  no = abs(OutPutMatrix[, 6L] - Q.Start[OutPutMatrix[, 1L]]))
-      # QueryStopDisplacement <- ifelse(test = QG.Strand[OutPutMatrix[, "QueryGene"]] == 1L,
-      #                                 yes = abs(OutPutMatrix[, 6L] - Q.Start[OutPutMatrix[, 1L]]),
-      #                                 no = abs(OutPutMatrix[, 7L] - Q.Stop[OutPutMatrix[, 1L]]))
-      # SubjectStartDisplacement <- ifelse(test = SG.Strand[OutPutMatrix[, "SubjectGene"]] == 1L,
-      #                                    yes = abs(OutPutMatrix[, 9L] - S.Stop[OutPutMatrix[, 2L]]),
-      #                                    no = abs(OutPutMatrix[, 8L] - S.Start[OutPutMatrix[, 2L]]))
-      # SubjectStopDisplacement <- ifelse(test = SG.Strand[OutPutMatrix[, "SubjectGene"]] == 1L,
-      #                                   yes = abs(OutPutMatrix[, 8L] - S.Start[OutPutMatrix[, 2L]]),
-      #                                   no = abs(OutPutMatrix[, 9L] - S.Stop[OutPutMatrix[, 2L]]))
-      # DisplacementMatrix <- cbind(QueryStartDisplacement,
-      #                             QueryStopDisplacement,
-      #                             SubjectStartDisplacement,
-      #                             SubjectStopDisplacement)
+      colnames(pairwise_table) <- c("QueryGene",
+                                    "SubjectGene",
+                                    "ExactOverlap",
+                                    "QueryIndex",
+                                    "SubjectIndex",
+                                    "QLeftPos",
+                                    "QRightPos",
+                                    "SLeftPos",
+                                    "SRightPos",
+                                    "MaxKmerSize",
+                                    "TotalKmerHits")
+      final_hit_table <- cbind("QueryGene" = final_hit_table$d1_hit,
+                               "SubjectGene" = final_hit_table$d2_hit,
+                               "ExactOverlap" = final_hit_table$width,
+                               "QueryIndex" = final_hit_table$idx1,
+                               "SubjectIndex" = final_hit_table$idx2,
+                               "QLeftPos" = final_hit_table$doc1_l,
+                               "QRightPos" = final_hit_table$doc1_r,
+                               "SLeftPos" = final_hit_table$doc2_l,
+                               "SRightPos" = final_hit_table$doc2_r,
+                               "QuerySubKey" = final_hit_table$d1_subkey,
+                               "SubjectSubKey" = final_hit_table$d2_subkey,
+                               "SyntenicOrigin" = final_hit_table$source_hit)
+      
+      
+      ResultMatrix[[m1, m2]] <- pairwise_table
+      ResultMatrix[[m2, m1]] <- final_hit_table
       
       if (Verbose) {
-        TotalCounter <- TotalCounter + 1L
         setTxtProgressBar(pb = pBar,
-                          value = TotalCounter/TotalLength)
+                          value = TotalCounter / TotalLength)
+        TotalCounter <- TotalCounter + 1L
       }
-      if (nrow(OutPutMatrix) == 1L &
-          all(is.na(OutPutMatrix))) {
-        OutPutMatrix <- OutPutMatrix[-1L, ] # i'm not sure this is safe in the long run?
-        # double check this with erik
-        # DisplacementMatrix[1, ] <- rep(0L, ncol(DisplacementMatrix))
-        # OverLapMatrix[1, ] <- rep(0L, ncol(OverLapMatrix))
-        OverLapMatrix <- OverLapMatrix[-1L, ]
-      }
-      ResultMatrix[m1, m2] <- list(OutPutMatrix)
-      ResultMatrix[m2, m1] <- list(OverLapMatrix)
     } # end of columns loop
   } # end of rows loop
   if (Verbose) {
     TotalTimeStop <- Sys.time()
-    
-    cat("\n")
+    close(pBar)
     print(TotalTimeStop - TotalTimeStart)
   }
   dimnames(ResultMatrix) <- dimnames(SyntenyObject)
   class(ResultMatrix) <- "LinkedPairs"
-  attr(ResultMatrix, "GeneCalls") <- FeatureRepresentations
+  ph1 <- lapply(X = FeatureRepresentations,
+                FUN = function(x) {
+                  attr(x = x,
+                       which = "origin")
+                })
+  names(ph1) <- names(FeatureRepresentations)
+  attr(ResultMatrix, "GeneCalls") <- ph1
   return(ResultMatrix)
 }
-
-
-
-
-
-
-
-
 
 

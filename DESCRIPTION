@@ -1,7 +1,7 @@
 Package: SynExtend
 Type: Package
 Title: Tools for Comparative Genomics
-Version: 1.23.0
+Version: 1.23.1
 Authors@R: c(
 	person("Nicholas", "Cooley", email = "npc19@pitt.edu", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6029-304X")),
 	person("Aidan", "Lakshman", email = "ahl27@pitt.edu", role = c("aut", "ctb"), comment = c(ORCID = "0000-0002-9465-6785")),
@@ -11,7 +11,7 @@ biocViews: Genetics, Clustering, ComparativeGenomics, DataImport
 Description: A multitude of tools for comparative genomics, focused on large-scale analyses of biological data. SynExtend includes tools for working with syntenic data, clustering massive network structures, and estimating functional relationships among genes.
 Depends: R (>= 4.5.0), DECIPHER (>= 2.28.0)
 Imports: methods, Biostrings, S4Vectors, IRanges, utils, stats, parallel, graphics, grDevices, RSQLite, DBI
-Suggests: BiocStyle, knitr, igraph, markdown, rmarkdown
+Suggests: BiocStyle, knitr, igraph, markdown, rmarkdown, rtracklayer
 License: GPL-3
 ByteCompile: true
 Encoding: UTF-8

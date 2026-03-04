@@ -55,6 +55,8 @@ export(NormVec)
 export(OneSite)
 export(RejectionBy)
 export(WithinSetCompetition)
+export(FrameDownward)
+export(SquaregffBy)
 
 S3method(subset, 'dendrogram')
 
