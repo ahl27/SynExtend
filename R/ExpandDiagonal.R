@@ -53,7 +53,8 @@ ExpandDiagonal <- function(SynExtendObject,
     stop("Processors must be at least 1.")
   }
   if (is.null(Processors)) {
-    Processors <- DECIPHER:::.detectCores()
+    Processors <- .Call("detectCores",
+                        PACKAGE = "DECIPHER")
   } else {
     Processors <- as.integer(Processors)
   }

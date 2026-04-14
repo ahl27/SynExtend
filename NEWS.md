@@ -1,3 +1,6 @@
+# SynExtend 1.23.1
+* Large rewrite of `NucleotideOverlap` to support accurate kmer hit tabulation for features with introns
+
 # SynExtend 1.21.2
 * Deprecated consensus clustering removed from `ExoLabel`
 * `ExoLabel` now supports argument `header=c(FALSE, TRUE, integer(1L))` to skip the first 0,1,n lines of each file (respectively)
